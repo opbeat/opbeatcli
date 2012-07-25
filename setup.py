@@ -29,7 +29,8 @@ tests_require = [
 
 install_requires = [
 	'ssh',
-	'requests'
+	'requests',
+	'pip'
 ]
 
 setup(

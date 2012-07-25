@@ -11,7 +11,7 @@ import os
 import os.path
 import socket
 
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 
 # This should be the schema+host of the Opbeat server
 SERVER = 'https://www.opbeat.com'
@@ -23,3 +23,6 @@ ERROR_API_PATH = '/api/v1/project/{0}/error/'
 DEPLOYMENT_API_PATH = '/api/v1/project/{0}/deployment/'
 
 TIMEOUT = 5
+
+CLIENT_ID = "0bbfbe8fc567d3db93de"
+

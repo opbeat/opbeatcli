@@ -1,11 +1,12 @@
-from command import CommandBase
-from credentials import load_tokens
 import requests
 import json
 import os
 from datetime import datetime, timedelta
 
 import logging
+
+from opbeat.command import CommandBase
+from opbeat.credentials import load_tokens
 
 
 class ShowTokenCommand(CommandBase):

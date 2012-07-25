@@ -11,25 +11,22 @@ import os
 import sys
 import pwd
 
-# from optparse import OptionParser, IndentedHelpFormatter, textwrap
-
 import argparse
 from command import load_all_commands
 from conf import defaults
 from credentials import load_tokens
 from client import Client
+from version import VERSION
 
 def set_shared_options(parser):
-	# parser.add_argument("-p", "--project-id", dest="project_id",action="store",
-	# 				  help="specify project id"),
-	# parser.add_argument("-k", "--api-key",action="store",
-	# 				dest="api_key", help="specify api key"),
 	parser.add_argument("-s", "--server",action="store",
 					dest="server", help="override server", default=defaults.SERVER),
 
 	parser.add_argument("-t", "--access-token",action="store",
 					dest="access_token", help="set access token"),
-
+	
+	parser.add_argument("--verbose", help="increase output verbosity",
+                    action="store_true")
 
 def get_credentials(filename = None):
 	try:
@@ -80,7 +77,7 @@ def build_client(project_id = None, access_token=None, server=None):
 
 def get_parser():
 	parser = argparse.ArgumentParser(
-		description="Interact with Opbeat")
+		description="Interact with Opbeat (v%s)" % VERSION)
 
 	set_shared_options(parser)
 	# Returns a list of classes
@@ -98,21 +95,6 @@ def main():
 	root.addHandler(logging.StreamHandler())
 	
 	
-	# desc = ' Interface with Opbeat'
-	# desc += """\n\nCommands supported are: \n"""
-	# desc += """\n - """+"""\n - """.join([k for k in pos_args]) + "\n"
-
-	# parser = OptionParser(description=desc,
-	# 							   prog='opbeat_python',
-	# 							   version=opbeat_python.VERSION,
-	# 							   option_list=get_options(),
-	# 							   usage = "usage: %prog [options] command",
-	# 						       formatter=IndentedHelpFormatterWithNL()
-
-	# 							   )
-
-	# parser.add_option("-k", "--api-key",action="store",
-	#                 dest="api_key", help="specify api key")
 	parser = get_parser()
 	if len(sys.argv) < 2:
 		parser.print_help()

@@ -1,7 +1,16 @@
+"""
+opbeat.credentials
+~~~~~~~~~~~~~~~~~~~~
+
+:copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
+:license: BSD, see LICENSE for more details.
+"""
+
+
 import logging
 import version
-from conf import defaults
-from utils import json
+from opbeat.conf import defaults
+from opbeat.utils import json
 
 import urllib2
 from urlparse import urlparse

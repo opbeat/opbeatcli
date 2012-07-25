@@ -1,3 +1,11 @@
+"""
+opbeat.credentials
+~~~~~~~~~~~~~~~~~~~~
+
+:copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
+:license: BSD, see LICENSE for more details.
+"""
+
 from ConfigParser import SafeConfigParser
 from datetime import datetime
 date_format = "%Y-%m-%d %H:%M:%S"

@@ -1,4 +1,4 @@
-from command import CommandBase
+from opbeat.command import CommandBase
 import os
 
 class ProjectsCommand(CommandBase):

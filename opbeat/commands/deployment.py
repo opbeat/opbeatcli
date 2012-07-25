@@ -1,11 +1,12 @@
-from command import CommandBase
-from runner import build_client
-from conf import defaults
+from opbeat.command import CommandBase
+from opbeat.runner import build_client
+from opbeat.conf import defaults
+# import pkg_resources
 from pip.vcs import vcs
 from pip.util import get_installed_distributions
 from pip.vcs import git, mercurial
 import sys
-import pkg_resources
+
 import os
 import socket
 

@@ -1,5 +1,14 @@
+"""
+opbeat.credentials
+~~~~~~~~~~~~~~~~~~~~
+
+:copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
+:license: BSD, see LICENSE for more details.
+"""
+
+
 from pkgutil import walk_packages
-import commands
+import opbeat.commands
 import sys
 import logging
 
@@ -8,10 +17,8 @@ from client import Client
 def load_all_commands():
 	return filter(lambda x: x is not None, [load_command(name) for name in command_names()])
 		
-
 def load_command(name):
-
-    full_name = 'commands.%s' % name
+    full_name = 'opbeat.commands.%s' % name
     if full_name in sys.modules:
         return None
     try:
@@ -21,7 +28,7 @@ def load_command(name):
     	print ex
 
 def command_names():
-	names = set((pkg[1] for pkg in walk_packages(path=commands.__path__)))
+	names = set((pkg[1] for pkg in walk_packages(path=opbeat.commands.__path__)))
 	return list(names)
 
 import argparse
@@ -45,13 +52,7 @@ class CommandBase(object):
 			name=self.name
 			)
 		
-		self.parser.set_defaults(func=self.run)
-		self.logger = logging.getLogger('opbeat.command.%s' % self.name)
-		self.logger.setLevel(logging.DEBUG)
-		ch = logging.StreamHandler()
-		ch.setLevel(logging.DEBUG)
-
-		self.logger.addHandler(ch)
+		self.parser.set_defaults(func=self.run_first)
 		self.add_args()
 
 		self._build_client()
@@ -62,6 +63,25 @@ class CommandBase(object):
 
 	def add_args(self):
 		pass
+
+	def setup_logging(self, args):
+		self.logger = logging.getLogger('opbeat.command.%s' % self.name)
+
+		if args.verbose:
+			level = logging.DEBUG
+		else:
+			level = logging.INFO
+
+		self.logger.setLevel(level)
 		
+		ch = logging.StreamHandler()
+		# ch.setLevel(logging.DEBUG)
+
+		self.logger.addHandler(ch)
+
+	def run_first(self, args):
+		self.setup_logging(args)
+		self.run(args)
+
 	def run(self, args):
-		print "RAN"
+		raise NotImplemented
