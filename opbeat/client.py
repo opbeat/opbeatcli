@@ -39,10 +39,12 @@ class Client(object):
 
 	protocol_version = '1.0'
 
-	def __init__(self, access_token, server, project_id = None):
+	def __init__(self, access_token, server, project_id = None, timeout = None):
 		self.access_token = access_token
 		self.server = server
 		self.project_id = project_id
+
+		self.timeout = timeout or defaults.TIMEOUT
 
 		if not (access_token and server):
 			msg = 'Missing configuration for client. Please see documentation.'
@@ -75,7 +77,7 @@ class Client(object):
 		if not auth_header:
 			access_token = self.access_token
 
-			auth_header = "access_token %s" % (access_token)
+			auth_header = "Bearer %s" % (access_token)
 	
 		headers = {
 			'Authorization': auth_header,
@@ -91,7 +93,7 @@ class Client(object):
 		"""
 		Serializes ``data`` into a raw string.
 		"""
-		return json.dumps(data).encode('zlib')
+		return json.dumps(data)#.encode('zlib')
 
 	def decode(self, data):
 		"""
@@ -106,7 +108,12 @@ class Client(object):
 
 	def send_remote(self, url, data, headers={}):
 		try:
-			self._send_remote(url=url, data=data, headers=headers)
+			"""
+			Sends a request to a remote webserver using HTTP POST.
+			"""
+			req = urllib2.Request(url, headers=headers)
+			response = urllib2.urlopen(req, data, self.timeout).read()
+			return response
 		except Exception, e:
 			if isinstance(e, urllib2.HTTPError):
 				body = e.read()

@@ -10,7 +10,7 @@ opbeat.utils.json
 import datetime
 import json
 import uuid
-
+import os
 
 class BetterJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -33,3 +33,7 @@ def dumps(value, **kwargs):
 
 def loads(value, **kwargs):
     return json.loads(value, object_hook=better_decoder)
+
+def say(words):
+    if os.path.exists('/usr/bin/say'):
+        os.system("/usr/bin/say %s" % words)

@@ -17,9 +17,9 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir))
 SERVER = 'https://www.opbeat.com'
 
 # Error API path
-ERROR_API_PATH = '/api/v1/error/'
+ERROR_API_PATH = '/api/v1/project/{0}/error/'
 
 # Deployment Tracking API path
-DEPLOYMENT_API_PATH = '/api/v1/deployment/'
+DEPLOYMENT_API_PATH = '/api/v1/project/{0}/deployment/'
 
 TIMEOUT = 5

@@ -194,7 +194,7 @@ def send_deployment_info(client, include_paths = None, directory=None):
 
 	data = {'server_name':server_name, 'releases':list_versions}
 
-	url = client.server+defaults.DEPLOYMENT_API_PATH
+	url = client.server+(defaults.DEPLOYMENT_API_PATH.format(client.project_id))
 	
 	# client.build_msg(data=data)
 
@@ -202,21 +202,21 @@ def send_deployment_info(client, include_paths = None, directory=None):
 
 
 class SendDeploymentCommand(CommandBase):
-	name = "send_deployment"
+	name = "deployment"
 	description = "Sends deployment info ASAP."
 
 	def add_args(self):
 		self.parser.add_argument('-p','--project-id', help='Use this project id.', dest="project_id", required=True)
 		self.parser.add_argument('-i','--include-path', help='Search this directory.', dest="include_paths")
-		self.parser.add_argument('--directory', help='Take repository information from this directory.', default=os.getcwd())
-		self.parser.add_argument('--module-name', help='Use this as the module name.', default="_repository")
+		self.parser.add_argument('-d','--directory', help='Take repository information from this directory.', dest="directory", default=os.getcwd())
+		self.parser.add_argument('-m','--module-name', help='Use this as the module name.', default="_repository")
 
 	def run(self, args):
 		self.logger.info('Sending deployment info...')
 		self.logger.info("Using directory: %s", args.directory)
-		client = build_client(project_id = args.project_id)
+		client = build_client(project_id = args.project_id, server = args.server, access_token = args.access_token)
 
-		send_deployment_info(client)
+		send_deployment_info(client, args.include_paths, args.directory)
 		# if len(args) > 0:
 		# 	directory = os.path.abspath(args[0])
 		# 	self.logger.debug("Using directory: %s", directory)

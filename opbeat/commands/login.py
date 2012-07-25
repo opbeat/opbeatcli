@@ -4,10 +4,10 @@ import requests
 import json
 import os
 from datetime import datetime, timedelta
-
+from utils import say
 import logging
-CLIENT_ID = "ab868d7a382098dfd0aa"
-CLIENT_SECRET = "ddc881e8da52485682eb7cdd240c73d09cc768f9"
+
+CLIENT_ID = "0bbfbe8fc567d3db93de"
 
 class LoginError(Exception):
 	pass
@@ -18,7 +18,6 @@ def exchange_code_for_token(server, code):
 		'code':code,
 		'grant_type':'authorization_code',
 		'client_id':CLIENT_ID,
-		'client_secret':CLIENT_SECRET
 	}
 	request = requests.post(url, data=data,verify=True)
 	result = json.loads(request.content)
@@ -33,6 +32,8 @@ class LoginCommand(CommandBase):
 	description = "Log in to the Opbeat platform."
 
 	def run(self, args):
+
+
 		self.logger.info("In order to proceed, point you browser to: ")
 		self.logger.info(" https://opbeat.com/oauth/cmdclient/")
 		self.logger.info("After you have authorized, you will be given a code.")
@@ -46,7 +47,8 @@ class LoginCommand(CommandBase):
 			save_tokens(access_token=result['access_token'], refresh_token=result['refresh_token'], expires=datetime.now() + timedelta(seconds=result['expires_in']))
 		except LoginError, ex:
 			print ex
-		else:	
+		else:
+			say("logged in")
 			self.logger.info('Success!')
 
 command = LoginCommand
