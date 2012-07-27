@@ -11,6 +11,7 @@ from pkgutil import walk_packages
 import opbeat.commands
 import sys
 import logging
+import argparse
 
 from client import Client
 
@@ -30,10 +31,6 @@ def load_command(name):
 def command_names():
 	names = set((pkg[1] for pkg in walk_packages(path=opbeat.commands.__path__)))
 	return list(names)
-
-import argparse
-
-command_dict = {}
 
 class CommandBase(object):
 	name = None

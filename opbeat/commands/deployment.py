@@ -89,6 +89,11 @@ def get_version_from_location(location):
 		backend = backend_cls()
 		url, rev = backend.get_info(location)
 
+		# Mercurial sometimes returns something like
+		# "Not trusting file /home/alice/repo/.hg/hgrc from untrusted user alice, group users"
+		# We'll ignore it for now
+		if len(url) > 250 or len(rev) > 100:
+			return None
 		vcs_type = VCS_NAME_MAP[backend_cls.name]
 
 		return {'type': vcs_type,'revision':rev, 'repository':url}
@@ -172,7 +177,7 @@ def annotate_url_with_ssh_config_info(url):
 	return url
 
 
-def send_deployment_info(client, include_paths = None, directory=None):
+def send_deployment_info(client, include_paths = None, directory=None, module_name = '_repository'):
 	if include_paths:
 		versions = get_versions_from_installed(include_paths)
 		versions = dict([(module, {'module':module, 'version':version}) for module, version in versions.items()])
@@ -185,7 +190,7 @@ def send_deployment_info(client, include_paths = None, directory=None):
 	rep_info = get_repository_info(directory)
 
 	if rep_info:
-		versions['_repository'] = {'module':'_repository', 'vcs':rep_info}
+		versions[module_name] = {'module':module_name, 'vcs':rep_info}
 
 	# Versions are returned as a dict of "module":"version"
 	# We convert it here. Just ditch the keys.
@@ -217,7 +222,7 @@ class SendDeploymentCommand(CommandBase):
 		self.logger.info("Using directory: %s", args.directory)
 		client = build_client(project_id = args.project_id, server = args.server, access_token = args.access_token)
 
-		send_deployment_info(client, args.include_paths, args.directory)
+		send_deployment_info(client, args.include_paths, args.directory, args.module_name)
 		# if len(args) > 0:
 		# 	directory = os.path.abspath(args[0])
 		# 	self.logger.debug("Using directory: %s", directory)

@@ -12,18 +12,18 @@ import sys
 import pwd
 
 import argparse
-from command import load_all_commands
-from conf import defaults
-from credentials import load_tokens
-from client import Client
-from version import VERSION
+from opbeat.command import load_all_commands
+from opbeat.conf import defaults
+from opbeat.credentials import load_tokens
+from opbeat.client import Client
+from opbeat.version import VERSION
 
 def set_shared_options(parser):
 	parser.add_argument("-s", "--server",action="store",
-					dest="server", help="override server", default=defaults.SERVER),
+					dest="server", help="override server. Can be set with environment variable OPBEAT_SERVER"),
 
 	parser.add_argument("-t", "--access-token",action="store",
-					dest="access_token", help="set access token"),
+					dest="access_token", help="set access token. Can be set with environment variable OPBEAT_ACCESS_TOKEN"),
 	
 	parser.add_argument("--verbose", help="increase output verbosity",
                     action="store_true")

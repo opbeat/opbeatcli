@@ -9,7 +9,7 @@ import logging
 from opbeat.command import CommandBase
 from opbeat.credentials import save_tokens
 from opbeat.utils import say
-from opbeat.conf.defaults import CLIENT_ID
+from opbeat.conf.defaults import CLIENT_ID, SERVER
 
 class LoginError(Exception):
 	pass
@@ -20,7 +20,10 @@ class LoginCommand(CommandBase):
 	description = "Log in to the Opbeat platform."
 
 	def add_args(self):
-		self.parser.add_argument('--client-id', help="Override oauth client id (you probably don't need this)", default=CLIENT_ID)
+		self.parser.add_argument('--client-id', 
+			help = "Override oauth client id (you probably don't need this)",
+			default = os.environ.get('OPBEAT_CLIENT_ID') or CLIENT_ID
+			)
 
 	def run(self, args):
 		self.logger.info("In order to proceed, point you browser to: ")
@@ -35,7 +38,10 @@ class LoginCommand(CommandBase):
 		else:
 			self.logger.debug('Logging in...')
 			try:
-				result = self.exchange_code_for_token(args.server, grant_code, args.client_id)
+
+				server = args.server or os.environ.get('OPBEAT_SERVER') or SERVER
+
+				result = self.exchange_code_for_token(server, grant_code, args.client_id)
 				save_tokens(access_token=result['access_token'], refresh_token=result['refresh_token'], expires=datetime.now() + timedelta(seconds=result['expires_in']))
 			except LoginError, ex:
 				self.logger.error(ex)
