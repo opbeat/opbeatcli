@@ -217,6 +217,7 @@ class SendDeploymentCommand(CommandBase):
 		self.parser.add_argument('-d','--directory', help='Take repository information from this directory.', dest="directory", default=os.getcwd())
 		self.parser.add_argument('-m','--module-name', help='Use this as the module name.', default="_repository")
 
+
 	def run(self, args):
 		self.logger.info('Sending deployment info...')
 		self.logger.info("Using directory: %s", args.directory)
