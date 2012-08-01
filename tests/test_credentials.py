@@ -12,6 +12,11 @@ class TestCredentials(unittest.TestCase):
 		except:
 			pass
 
+	def tearDown(self):
+		try:
+			os.remove(config_file)
+		except:
+			pass
 
 	def test_get_default_filename(self):
 		self.assertNotEqual(None, get_default_filename())
@@ -22,8 +27,11 @@ class TestCredentials(unittest.TestCase):
 	def test_get_config_basic(self):
 		value = "Avalue"
 		f = open(config_file,'w')
-		f.write("""[justtesting]
-akey = %s""" % value)
+		f.write(
+"""
+[justtesting]
+akey = %s
+""" % value)
 		f.close()
 
 		config = get_config(config_file)

@@ -110,70 +110,68 @@ def get_repository_info(directory=None):
 	cwd_rev_info = get_version_from_location(directory)
 	return cwd_rev_info
 
-def split_netloc(netloc, path):
+def extract_host_from_netloc(netloc):
 	if '@' in netloc:
 		_, netloc = netloc.split('@')
 
 	if ':' in netloc:
-		host, netlocpath = netloc.split(':')
-		path = "/" + netlocpath + path
+		host, _ = netloc.split(':')
 	else:
 		host = netloc
 
-	return host, path
+	return host
 
-def annotate_url_with_ssh_config_info(url):
+
+def get_ssh_config():
+	try:
+		from ssh.config import SSHConfig
+	except:
+		return None
 	from os.path import expanduser
-	from urlparse import urlsplit, urlunsplit
-	from ssh.config import SSHConfig
-
-	def hostinfo(host, config, username=None):
-		hive = config.lookup(host)
-		if 'hostname' in hive:
-			host = hive['hostname']
-		if 'user' in hive:
-			host = '%s@%s' % (hive['user'], host)
-		elif username:
-			host = '%s@%s' % (username, host)
-
-		if 'port' in hive:
-			host = '%s:%s' % (host, hive['port'])
-		return host
 
 	try:
 		config_file = file(expanduser('~/.ssh/config'))
 	except IOError, ex:
 		logger.debug(ex)
+		return None
 	else:
-		config = SSHConfig()
-		config.parse(config_file)
-		
+		try:
+			config = SSHConfig()
+			config.parse(config_file)
+		except Exception, ex:
+			logger.debug(ex)
+			return None
+	return config
+
+def annotate_url_with_ssh_config_info(url):
+	from urlparse import urlsplit, urlunsplit
+
+	config = get_ssh_config()
+
+	added = None
+	if config:
 		parsed_url = urlsplit(url)
 		if not parsed_url.hostname:
 			# schema missing
-			parsed_url = urlsplit("ssh://" + url)
+			added = "git://"
+			parsed_url = urlsplit(added + url)
 
-			if parsed_url.path:
-				path = parsed_url.path
+		parsed_asdict = parsed_url._asdict()
+			
+		host = extract_host_from_netloc(parsed_url.netloc)
 		
-				# if '@' in host:
-				# 	user, host = host.split('@')
+		hive = config.lookup(host)
+		if 'hostname' in hive:
+			netloc = parsed_url.netloc.replace(host, hive['hostname'])	
 
-				# if ':' in host:
-				# 	host, path = host.split(':')
+		parsed_asdict['path'] = parsed_url.path
+		parsed_asdict['netloc'] = netloc
 
-				# lookup = config.lookup(host)
-				parsed_asdict = parsed_url._asdict()
-				
-				host, path = split_netloc(parsed_url.netloc, path)
-
-				netloc = hostinfo(host, config, parsed_url.username, parsed_url.password)
-
-				# parsed_asdict['netloc'] = 
-				parsed_asdict['path'] = path or parsed_url.path
-				# parsed_asdict['username'] = user or parsed_url.username
-
-			return urlunsplit(parsed_asdict.values())
+		url = urlunsplit(parsed_asdict.values())
+		if added and url.startswith(added):
+			return url[len(added):]
+		else:
+			return url
 	return url
 
 
