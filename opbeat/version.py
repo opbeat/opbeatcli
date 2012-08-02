@@ -1,2 +1,3 @@
 
 VERSION = "0.9"
+PROTOCOL_VERSION = "v0"

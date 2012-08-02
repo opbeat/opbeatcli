@@ -1,6 +1,6 @@
 import unittest
 import os
-from opbeat.credentials import get_default_filename, get_config, save_config, load_tokens, save_tokens
+from opbeat.credentials import get_default_filename, get_config, save_config, load_credentials, save_credentials
 from datetime import datetime, timedelta
 
 config_file = "test_config.ini"
@@ -43,17 +43,17 @@ akey = %s
 		refresh_token = "re_token"
 		expires = datetime.now() + timedelta(days=1)
 
-		save_tokens(access_token, refresh_token, expires, config_file)
+		save_credentials(access_token, refresh_token, expires, config_file)
 
 	def test_save_and_load_access_token(self):
 		access_token = "ac_token"
 		expires = datetime.now().replace(microsecond=0) + timedelta(days=1)
 		refresh_token = "re_token"
 
-		save_tokens(access_token, refresh_token,expires, config_file)
+		save_credentials(access_token, refresh_token,expires, config_file)
 
-		tokens = load_tokens(config_file)
+		credentials = load_credentials(config_file)
 
-		self.assertEqual(tokens['access_token'], access_token)
-		self.assertEqual(tokens['refresh_token'], refresh_token)
-		self.assertEqual(tokens['expires'], expires)
+		self.assertEqual(credentials['access_token'], access_token)
+		self.assertEqual(credentials['refresh_token'], refresh_token)
+		self.assertEqual(credentials['expires'], expires)

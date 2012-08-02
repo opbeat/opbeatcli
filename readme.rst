@@ -25,7 +25,7 @@ Set access token. Can be set with environment variable OPBEAT_ACCESS_TOKEN.
 
 	::
 
-	--verbose
+	 --verbose
 
 Increase output verbosity
 

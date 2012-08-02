@@ -1,10 +1,14 @@
 from opbeat.command import CommandBase
 from opbeat.runner import build_client
 from opbeat.conf import defaults
-# import pkg_resources
+from opbeat.conf.defaults import CLIENT_ID, SERVER
+
+import pkg_resources
 from pip.vcs import vcs
 from pip.util import get_installed_distributions
 from pip.vcs import git, mercurial
+
+
 import sys
 
 import os
@@ -94,6 +98,9 @@ def get_version_from_location(location):
 		# We'll ignore it for now
 		if len(url) > 250 or len(rev) > 100:
 			return None
+
+		url = annotate_url_with_ssh_config_info(url)
+
 		vcs_type = VCS_NAME_MAP[backend_cls.name]
 
 		return {'type': vcs_type,'revision':rev, 'repository':url}
@@ -200,36 +207,42 @@ def send_deployment_info(client, include_paths = None, directory=None, module_na
 
 	url = client.server+(defaults.DEPLOYMENT_API_PATH.format(client.project_id))
 	
-	# client.build_msg(data=data)
-
 	return client.send(url=url,data=data)
 
 
-class SendDeploymentCommand(CommandBase):
+class DeploymentCommand(CommandBase):
 	name = "deployment"
 	description = "Sends deployment info ASAP."
 
 	def add_args(self):
-		self.parser.add_argument('-p','--project-id', help='Use this project id.', dest="project_id", required=True)
+		super(DeploymentCommand, self).add_args()
+		self.parser.add_argument('-p','--project-id', help='Use this project id. Can be set with environment variable OPBEAT_PROJECT_ID', dest="project_id", required=True, default=os.environ.get('OPBEAT_PROJECT_ID'))
 		self.parser.add_argument('-i','--include-path', help='Search this directory.', dest="include_paths")
-		self.parser.add_argument('-d','--directory', help='Take repository information from this directory.', dest="directory", default=os.getcwd())
+		self.parser.add_argument('-d','--directory', help='Take repository information from this directory. Defaults to current working directory', dest="directory", default=os.getcwd())
 		self.parser.add_argument('-m','--module-name', help='Use this as the module name.', default="_repository")
 
+		self.parser.add_argument('--dry-run', help="Don't send anything. Use '--verbode' to print the request instead.", action="store_true", dest="dry_run")
+
+		self.parser.add_argument('--client-id', 
+			help = "Override OAuth client id (you probably don't need this)",
+			default = os.environ.get('OPBEAT_CLIENT_ID', CLIENT_ID)
+			)
 
 	def run(self, args):
+		client = build_client(
+			project_id = args.project_id,
+			server = args.server,
+			logger = self.logger,
+			access_token = args.access_token,
+			config_file=args.config_file,
+			client_id = args.client_id,
+			dry_run = args.dry_run
+			)
+		if not client: return
 		self.logger.info('Sending deployment info...')
 		self.logger.info("Using directory: %s", args.directory)
-		client = build_client(project_id = args.project_id, server = args.server, access_token = args.access_token)
 
 		send_deployment_info(client, args.include_paths, args.directory, args.module_name)
-		# if len(args) > 0:
-		# 	directory = os.path.abspath(args[0])
-		# 	self.logger.debug("Using directory: %s", directory)
-		# else:
-		# 	directory = None
 
-		# client.send_deployment_info(directory=args.directory)
-		# self.logger.info('success!')
-
-command = SendDeploymentCommand
+command = DeploymentCommand
 

@@ -9,6 +9,7 @@ opbeat.credentials
 
 from pkgutil import walk_packages
 import opbeat.commands
+from credentials import load_credentials
 import sys
 import logging
 import argparse
@@ -32,6 +33,13 @@ def command_names():
 	names = set((pkg[1] for pkg in walk_packages(path=opbeat.commands.__path__)))
 	return list(names)
 
+
+# class SupportsDryRunMixin(object):
+# 	def add_args(self):
+# 		super(SupportsDryRunMixin, self).add_args()
+# 		print "HELLO"
+# 		self.parser.add_argument('-dr','--dry-run', help="Don't send anything. Use '--verbode' to print the request instead.", action="store_true", dest="dry_run")
+
 class CommandBase(object):
 	name = None
 	usage = None
@@ -42,7 +50,7 @@ class CommandBase(object):
 
 	def __init__(self, subparsers):
 		assert self.name
-		 
+
 		self.parser = subparsers.add_parser(
 			description=self.description,
 			usage = self.usage,
@@ -50,34 +58,17 @@ class CommandBase(object):
 			)
 		
 		self.parser.set_defaults(func=self.run_first)
+
 		self.add_args()
 
-		self._build_client()
-
-	def _build_client(self):
-		## Load 
-		pass
 
 	def add_args(self):
 		pass
 
-	def setup_logging(self, args):
-		self.logger = logging.getLogger('opbeat.command.%s' % self.name)
+	def run_first(self, args, logger):
+		self.credentials = load_credentials(args.config_file)
 
-		if args.verbose:
-			level = logging.DEBUG
-		else:
-			level = logging.INFO
-
-		self.logger.setLevel(level)
-		
-		ch = logging.StreamHandler()
-		# ch.setLevel(logging.DEBUG)
-
-		self.logger.addHandler(ch)
-
-	def run_first(self, args):
-		self.setup_logging(args)
+		self.logger = logger
 		self.run(args)
 
 	def run(self, args):

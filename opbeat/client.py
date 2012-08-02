@@ -41,19 +41,14 @@ class Client(object):
 	>>> client.send(**data)
 
 	"""
-	logger = logging.getLogger('opbeat.client')
-	ch = logging.StreamHandler()
-	ch.setLevel(logging.INFO)
-	logger.addHandler(ch)
-
-	protocol_version = '1.0'
-
-	def __init__(self, access_token, server, project_id = None, timeout = None):
+	def __init__(self, logger, access_token, server, project_id = None, timeout = None, dry_run = False):
 		self.access_token = access_token
 		self.server = server
 		self.project_id = project_id
 
 		self.timeout = timeout or defaults.TIMEOUT
+		self.logger = logger
+		self.dry_run = dry_run
 
 		if not (access_token and server):
 			msg = 'Missing configuration for client. Please see documentation.'
@@ -67,7 +62,6 @@ class Client(object):
 		if self.project_id and 'project_id' not in data:
 			data['project_id'] = self.project_id
 
-
 		message = self.encode(data)
 		return self.send_encoded(message,url, auth_header=auth_header)
 
@@ -77,11 +71,6 @@ class Client(object):
 		payload off to ``send_remote`` for each server specified in the servers
 		configuration.
 		"""
-
-		# server = server or self.server
-		# if not server:
-		# 	warnings.warn('opbeat client has no remote servers configured')
-		# 	return
 
 		if not auth_header:
 			access_token = self.access_token
@@ -93,8 +82,6 @@ class Client(object):
 			'Content-Type': 'application/json',
 			'User-Agent': 'opbeat/%s' % version.VERSION
 		}
-
-		# url =  "%s%s" % (self.server, url)
 
 		self.send_remote(url=url, data=data, headers=headers)
 
@@ -116,19 +103,25 @@ class Client(object):
 		return transport.send(data, headers)
 
 	def send_remote(self, url, data, headers={}):
+		self.logger.debug("Sending: %s", data)
+
+		if self.dry_run:
+			return None
+
 		try:
 			"""
 			Sends a request to a remote webserver using HTTP POST.
 			"""
 			req = urllib2.Request(url, headers=headers)
 			response = urllib2.urlopen(req, data, self.timeout).read()
+
+			self.logger.debug("Got: %s", response)
 			return response
 		except Exception, e:
 			if isinstance(e, urllib2.HTTPError):
 				body = e.read()
 				self.logger.error('Unable to reach Opbeat server: %s (url: %%s, body: %%s)' % (e,), url, body,
-					exc_info=True, extra={'data': {'body': body, 'remote_url': url}})
+					exc_info=True)
 			else:
 				tmpl = 'Unable to reach Opbeat server: %s (url: %%s)'
-				self.logger.error(tmpl % (e,), url, exc_info=True,
-						extra={'data': {'remote_url': url}})
+				self.logger.error(tmpl % (e,), url, exc_info=True)
