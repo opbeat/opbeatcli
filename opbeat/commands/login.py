@@ -67,9 +67,9 @@ class LoginCommand(CommandBase):
 		try:
 			login(self.logger, args.server, args.client_id)
 		except LoginError, ex:
-			logger.error(ex)
+			self.logger.error(ex)
 		else:
 			say("logged in")
-			logger.debug('Success!')
+			self.logger.debug('Success!')
 
 command = LoginCommand
