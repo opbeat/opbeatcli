@@ -35,11 +35,11 @@ install_requires = [
 
 setup(
 	name='opbeat',
-	version='1.0',
+	version='1.0.1',
 	author='Ron Cohen',
 	author_email='ron@opbeat.com',
 	url='http://github.com/opbeat/opbeat',
-	description='opbeat is a client for Opbeat (https://www.opbeat.com)',
+	description='opbeat is a client for Opbeat (https://opbeat.com)',
 	long_description=__doc__,
 	packages=find_packages(exclude=("tests",)),
 	zip_safe=False,
