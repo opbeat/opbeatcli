@@ -71,7 +71,7 @@ def get_versions_from_installed(module_list=None):
 
 	return versions
 
-def get_version_from_distributions(distributions):
+def get_version_from_distributions(distributions, logger):
 	result = {}
 	for d in distributions:
 		
@@ -80,14 +80,14 @@ def get_version_from_distributions(distributions):
 		if d.has_version():
 			result[d.key]['version'] = d.version
 
-		vcs_version = get_version_from_location(d.location)
+		vcs_version = get_version_from_location(d.location, logger)
 		if vcs_version:
 			result[d.key]['vcs'] = vcs_version
 
 	return result
 
 # Recursively try to find vcs.
-def get_version_from_location(location):
+def get_version_from_location(location, logger):
 	backend_cls = vcs.get_backend_from_location(location)
 	if backend_cls:
 		backend = backend_cls()
@@ -99,7 +99,7 @@ def get_version_from_location(location):
 		if len(url) > 250 or len(rev) > 100:
 			return None
 
-		url = annotate_url_with_ssh_config_info(url)
+		url = annotate_url_with_ssh_config_info(url, logger)
 
 		vcs_type = VCS_NAME_MAP[backend_cls.name]
 
@@ -107,14 +107,14 @@ def get_version_from_location(location):
 	else:
 		head, tail = os.path.split(location)
 		if head and head != '/': ## TODO: Support windows
-			return get_version_from_location(head)
+			return get_version_from_location(head, logger)
 		else:
 			return None
 
-def get_repository_info(directory=None):
+def get_repository_info(logger, directory=None):
 	if not directory:
 		directory = os.getcwd()
-	cwd_rev_info = get_version_from_location(directory)
+	cwd_rev_info = get_version_from_location(directory, logger)
 	return cwd_rev_info
 
 def extract_host_from_netloc(netloc):
@@ -129,7 +129,7 @@ def extract_host_from_netloc(netloc):
 	return host
 
 
-def get_ssh_config():
+def get_ssh_config(logger):
 	try:
 		from ssh.config import SSHConfig
 	except:
@@ -150,10 +150,10 @@ def get_ssh_config():
 			return None
 	return config
 
-def annotate_url_with_ssh_config_info(url):
+def annotate_url_with_ssh_config_info(url, logger):
 	from urlparse import urlsplit, urlunsplit
 
-	config = get_ssh_config()
+	config = get_ssh_config(logger)
 
 	added = None
 	if config:
@@ -182,17 +182,17 @@ def annotate_url_with_ssh_config_info(url):
 	return url
 
 
-def send_deployment_info(client, include_paths = None, directory=None, module_name = '_repository'):
+def send_deployment_info(client, logger, include_paths = None, directory=None, module_name = '_repository'):
 	if include_paths:
 		versions = get_versions_from_installed(include_paths)
 		versions = dict([(module, {'module':module, 'version':version}) for module, version in versions.items()])
 	else:
 		versions = {}
 
-	dist_versions = get_version_from_distributions(get_installed_distributions())
+	dist_versions = get_version_from_distributions(get_installed_distributions(), logger)
 	versions.update(dist_versions)
 
-	rep_info = get_repository_info(directory)
+	rep_info = get_repository_info(logger, directory)
 
 	if rep_info:
 		versions[module_name] = {'module':module_name, 'vcs':rep_info}
@@ -242,7 +242,7 @@ class DeploymentCommand(CommandBase):
 		self.logger.info('Sending deployment info...')
 		self.logger.info("Using directory: %s", args.directory)
 
-		send_deployment_info(client, args.include_paths, args.directory, args.module_name)
+		send_deployment_info(client, self.logger, args.include_paths, args.directory, args.module_name)
 
 command = DeploymentCommand
 
