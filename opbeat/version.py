@@ -1,7 +1,7 @@
 
 try:
     VERSION = __import__('pkg_resources') \
-        .get_distribution('opbeat_python').version
+        .get_distribution('opbeat').version
 except Exception, e:
     VERSION = 'unknown'
 
