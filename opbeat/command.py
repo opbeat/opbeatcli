@@ -20,14 +20,15 @@ def load_all_commands():
 	return filter(lambda x: x is not None, [load_command(name) for name in command_names()])
 		
 def load_command(name):
-    full_name = 'opbeat.commands.%s' % name
-    if full_name in sys.modules:
-        return None
-    try:
-        __import__(full_name)
-        return sys.modules[full_name].command
-    except ImportError, ex:
-    	print ex
+	full_name = 'opbeat.commands.%s' % name
+
+	try:
+		if full_name not in sys.modules:
+			__import__(full_name)
+	except ImportError, ex:
+		print ex
+	else:
+		return sys.modules[full_name].command
 
 def command_names():
 	names = set((pkg[1] for pkg in walk_packages(path=opbeat.commands.__path__)))
