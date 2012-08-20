@@ -14,7 +14,7 @@ import socket
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 
 # This should be the schema+host of the Opbeat server
-SERVER = 'https://www.opbeat.com'
+SERVER = 'https://opbeat.com'
 
 # Error API path
 ERROR_API_PATH = '/api/v0/project/{0}/error/'
