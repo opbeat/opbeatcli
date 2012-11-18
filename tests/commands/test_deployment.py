@@ -1,9 +1,13 @@
 import unittest
 import mock
 import os
+import logging
+
 from datetime import datetime, timedelta
 
 from opbeat.commands.deployment import annotate_url_with_ssh_config_info
+
+logger = logging.getLogger('opbeat.tests')
 
 class MockSshConfig(object):
 	def lookup(self, host):
@@ -22,7 +26,7 @@ class TestDeployment(unittest.TestCase):
 		get_ssh_config.return_value = None
 		pass_through_url = "git@github.com:opbeat/opbeatcli.git"
 
-		actual_url = annotate_url_with_ssh_config_info(pass_through_url)
+		actual_url = annotate_url_with_ssh_config_info(pass_through_url, logger)
 
 		self.assertEqual(pass_through_url,actual_url)
 
@@ -31,7 +35,7 @@ class TestDeployment(unittest.TestCase):
 		get_ssh_config.return_value = MockSshConfig()
 		pass_through_url = "git@github.com:opbeat/opbeatcli.git"
 
-		actual_url = annotate_url_with_ssh_config_info(pass_through_url)
+		actual_url = annotate_url_with_ssh_config_info(pass_through_url, logger)
 
 		self.assertEqual(pass_through_url,actual_url)
 
@@ -40,7 +44,7 @@ class TestDeployment(unittest.TestCase):
 		get_ssh_config.return_value = MockSshConfig()
 
 		url ='git@opbeat_python:opbeat/opbeat_python.git'
-		actual_url = annotate_url_with_ssh_config_info(url)
+		actual_url = annotate_url_with_ssh_config_info(url, logger)
 
 		self.assertEqual('git@github.com:opbeat/opbeat_python.git',actual_url)
 
@@ -49,7 +53,7 @@ class TestDeployment(unittest.TestCase):
 		get_ssh_config.return_value = MockSshConfig()
 
 		url = 'ssh://hg@opbeat_python/username/reponame/'
-		actual_url = annotate_url_with_ssh_config_info(url)
+		actual_url = annotate_url_with_ssh_config_info(url, logger)
 
 		self.assertEqual('ssh://hg@github.com/username/reponame/',actual_url)
 	
@@ -58,7 +62,7 @@ class TestDeployment(unittest.TestCase):
 		get_ssh_config.return_value = MockSshConfig()
 
 		url ='git://opbeat_python/roncohen/django-hstore.git'
-		actual_url = annotate_url_with_ssh_config_info(url)
+		actual_url = annotate_url_with_ssh_config_info(url, logger)
 
 		self.assertEqual('git://github.com/roncohen/django-hstore.git',actual_url)
 	
@@ -67,6 +71,6 @@ class TestDeployment(unittest.TestCase):
 		get_ssh_config.return_value = MockSshConfig()
 
 		url ='https://github.com/omab/django-social-auth.git'
-		actual_url = annotate_url_with_ssh_config_info(url)
+		actual_url = annotate_url_with_ssh_config_info(url, logger)
 
 		self.assertEqual(url,actual_url)

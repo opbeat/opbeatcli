@@ -1,5 +1,5 @@
 """
-opbeat.credentials
+opbeat.client
 ~~~~~~~~~~~~~~~~~~~~
 
 :copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
@@ -41,9 +41,8 @@ class Client(object):
 	>>> client.send(**data)
 
 	"""
-	def __init__(self, logger, access_token, server, project_id = None, timeout = None, dry_run = False):
+	def __init__(self, logger, access_token, project_id = None, timeout = None, dry_run = False):
 		self.access_token = access_token
-		self.server = server
 		self.project_id = project_id
 
 		self.timeout = timeout or defaults.TIMEOUT
