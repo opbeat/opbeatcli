@@ -34,7 +34,7 @@ Login
 
 	::
 	
-		opbeat login
+		opbeat [-s SERVER] login
 
 Logs into the Opbeat platform and saves credentials on the machine.
 
@@ -43,7 +43,7 @@ Deployment
 
 	::
 		
-		opbeat deployment -p PROJECT_ID [-d DIRECTORY] [-m MODULE_NAME]
+		opbeat [-t ACCESS_TOKEN] [-s SERVER] deployment -p PROJECT_ID [-d DIRECTORY] [-m MODULE_NAME]
 
 Notifies Opbeat about version of installed software. By default, it will collect all available python modules.
 
