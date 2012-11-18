@@ -19,8 +19,8 @@ __all__ = ('Client',)
 
 class Client(object):
 	"""
-	The base opbeat client, which handles communication over the
-	with Opbeat servers.
+	The base opbeat client, which handles communication with the
+	Opbeat servers.
 
 	Will read default configuration from the environment variable
 	``OPBEAT_PROJECT_ID`` and ``OPBEAT_API_KEY`` if available.
