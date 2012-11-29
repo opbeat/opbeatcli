@@ -96,6 +96,7 @@ def main():
 	if len(sys.argv) < 2:
 		parser.print_help()
 	else:
+		args = None
 		try:
 			args = parser.parse_args()
 			if args.verbose:
@@ -111,7 +112,7 @@ def main():
 
 			args.func(args, root)
 		except Exception, ex:
-			if args.verbose:
+			if args and args.verbose:
 				root.exception("Error executing command")
 			else:
 				root.error(ex)

@@ -1,29 +1,28 @@
 from opbeat.command import CommandBase
 from opbeat.runner import build_client
 from opbeat.conf import defaults
-from opbeat.conf.defaults import CLIENT_ID, SERVER
+from opbeat.conf.defaults import CLIENT_ID
 
 import pkg_resources
 from pip.vcs import vcs
 from pip.util import get_installed_distributions
-from pip.vcs import git, mercurial
 
-
+import argparse
 import sys
-
 import os
 import socket
 
 VCS_NAME_MAP = {
-	'git':'git',
-	'hg':'mercurial',
-	'svn':'subversion'
+	'git': 'git',
+	'hg': 'mercurial',
+	'svn': 'subversion'
 }
 
 SERVER_NAME = socket.gethostname()
 
 
-_VERSION_CACHE ={}
+_VERSION_CACHE = {}
+
 def get_versions_from_installed(module_list=None):
 	if not module_list:
 		return {}
@@ -71,11 +70,11 @@ def get_versions_from_installed(module_list=None):
 
 	return versions
 
+
 def get_version_from_distributions(distributions, logger):
 	result = {}
 	for d in distributions:
-		
-		result[d.key] = {'module':d.key}
+		result[d.key] = {'module': d.key}
 
 		if d.has_version():
 			result[d.key]['version'] = d.version
@@ -164,12 +163,12 @@ def annotate_url_with_ssh_config_info(url, logger):
 			parsed_url = urlsplit(added + url)
 
 		parsed_asdict = parsed_url._asdict()
-			
+
 		host = extract_host_from_netloc(parsed_url.netloc)
-		
+
 		hive = config.lookup(host)
 		if 'hostname' in hive:
-			netloc = parsed_url.netloc.replace(host, hive['hostname'])	
+			netloc = parsed_url.netloc.replace(host, hive['hostname'])
 
 		parsed_asdict['path'] = parsed_url.path
 		parsed_asdict['netloc'] = netloc
@@ -210,22 +209,56 @@ def send_deployment_info(client, logger, include_paths = None, directory=None, m
 	return client.send(url=url,data=data)
 
 
+class ValidateDirectory(argparse.Action):
+	def __call__(self, parser, args, values, option_string=None):
+		directory = values
+		
+		if not os.path.isdir(directory):
+			raise ValueError('Invalid directory {s!r}'.format(s=directory))
+		setattr(args, 'directory', directory)
+
 class DeploymentCommand(CommandBase):
 	name = "deployment"
 	description = "Sends deployment info ASAP."
 
 	def add_args(self):
 		super(DeploymentCommand, self).add_args()
-		self.parser.add_argument('-p','--project-id', help='Use this project id. Can be set with environment variable OPBEAT_PROJECT_ID', dest="project_id", required=True, default=os.environ.get('OPBEAT_PROJECT_ID'))
-		self.parser.add_argument('-i','--include-path', help='Search this directory.', dest="include_paths")
-		self.parser.add_argument('-d','--directory', help='Take repository information from this directory. Defaults to current working directory', dest="directory", default=os.getcwd())
-		self.parser.add_argument('-m','--module-name', help='Use this as the module name.', default="_repository")
+		self.parser.add_argument(
+			'-p', '--project-id',
+			help='Use this project id. Can be set with environment  \
+variable OPBEAT_PROJECT_ID',
+			dest="project_id",
+			required=True,
+			default=os.environ.get('OPBEAT_PROJECT_ID')
+			)
 
-		self.parser.add_argument('--dry-run', help="Don't send anything. Use '--verbode' to print the request instead.", action="store_true", dest="dry_run")
+		self.parser.add_argument(
+			'-i', '--include-path',
+			help='Search this directory.',
+			dest="include_paths")
+		self.parser.add_argument(
+			'-d', '--directory',
+			help='Take repository information from this directory.  \
+Defaults to current working directory',
+			dest="directory",
+			default=os.getcwd(),
+			action=ValidateDirectory)
 
-		self.parser.add_argument('--client-id', 
-			help = "Override OAuth client id (you probably don't need this)",
-			default = os.environ.get('OPBEAT_CLIENT_ID', CLIENT_ID)
+		self.parser.add_argument(
+			'-m', '--module-name',
+			help='Use this as the module name.',
+			default="_repository")
+
+		self.parser.add_argument(
+			'--dry-run',
+			help="Don't send anything.  \
+Use '--verbose' to print the request instead.",
+			action="store_true",
+			dest="dry_run")
+
+		self.parser.add_argument('--client-id',
+			help="Override OAuth client id (you probably don't need this)",
+			default=os.environ.get('OPBEAT_CLIENT_ID', CLIENT_ID)
 			)
 
 	def run(self, args):
