@@ -18,24 +18,26 @@ try:
 except ImportError:
 	pass
 
+import sys
 from setuptools import setup, find_packages
 
 tests_require = [
-	# 'Django>=1.,<=1.4',
 	'nose',
 	'mock',
 	'unittest2',
 ]
 
 install_requires = [
-	'ssh',
 	'requests',
-	'pip'
+	'pip==1.2.1'
 ]
+
+if sys.version_info[:2] < (2, 7):
+	install_requires.append('argparse')
 
 setup(
 	name='opbeat',
-	version='1.0.1',
+	version='1.0.2',
 	author='Ron Cohen',
 	author_email='ron@opbeat.com',
 	url='http://github.com/opbeat/opbeat',

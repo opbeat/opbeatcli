@@ -4,6 +4,8 @@ opbeat.client
 
 :copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
 :license: BSD, see LICENSE for more details.
+
+Very inspired by the Client in the sentry/raven project.
 """
 
 

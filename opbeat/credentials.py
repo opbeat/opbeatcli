@@ -7,9 +7,10 @@ opbeat.credentials
 """
 import ConfigParser
 from ConfigParser import SafeConfigParser
+import os
+
 from datetime import datetime
 date_format = "%Y-%m-%d %H:%M:%S"
-import os
 
 def get_default_filename():
 	return os.path.expanduser("~/.opbeat")
