@@ -12,4 +12,4 @@ install:
   # - sudo pip install https://github.com/dcramer/pyflakes/tarball/master
   - sudo pip install -e . --use-mirrors
 script:
-  - python setup.py test
+  - sudo python setup.py test
