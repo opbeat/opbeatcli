@@ -1,8 +1,8 @@
-from opbeat.command import CommandBase
-from opbeat.runner import build_client
-from opbeat.conf import defaults
-from opbeat.conf.defaults import CLIENT_ID
-from opbeat.utils.ssh_config import SSHConfig
+from opbeatcli.command import CommandBase
+from opbeatcli.runner import build_client
+from opbeatcli.conf import defaults
+from opbeatcli.conf.defaults import CLIENT_ID
+from opbeatcli.utils.ssh_config import SSHConfig
 
 import pkg_resources
 from pip.vcs import vcs
@@ -22,7 +22,7 @@ VCS_NAME_MAP = {
 	'svn': 'subversion'
 }
 
-SERVER_NAME = socket.gethostname()
+HOSTNAME = socket.gethostname()
 
 
 _VERSION_CACHE = {}
@@ -187,9 +187,15 @@ def annotate_url_with_ssh_config_info(url, logger):
 	return url
 
 
+def get_default_module_name(directory):
+	if directory[-1:] == '/':
+		return os.path.basename(directory[:-1])
+	else:
+		return os.path.basename(directory)
+
 def send_deployment_info(
 	client, logger, include_paths=None,
-		directory=None, module_name='_repository'):
+		directory=None, module_name=None):
 	if include_paths:
 		versions = get_versions_from_installed(include_paths)
 		versions = dict([(module, {'module':module, 'version':
@@ -204,18 +210,21 @@ def send_deployment_info(
 	rep_info = get_repository_info(logger, directory)
 
 	if rep_info:
+		if not module_name:
+			module_name = get_default_module_name(directory)
+
 		versions[module_name] = {'module': module_name, 'vcs': rep_info}
 
 	# Versions are returned as a dict of "module":"version"
 	# We convert it here. Just ditch the keys.
 	list_versions = [v for k, v in versions.items()]
 
-	server_name = SERVER_NAME
+	hostname = HOSTNAME
 
-	data = {'server_name': server_name, 'releases': list_versions}
+	data = {'machine': {'hostname': hostname}, 'releases': list_versions}
 
 	url = client.server + (defaults.DEPLOYMENT_API_PATH.format(
-		client.project_id))
+		client.organization_id, client.app_id))
 
 	return client.send(url=url, data=data)
 
@@ -235,14 +244,6 @@ class DeploymentCommand(CommandBase):
 
 	def add_args(self):
 		super(DeploymentCommand, self).add_args()
-		self.parser.add_argument(
-			'-p', '--project-id',
-			help='Use this project id. Can be set with environment  \
-variable OPBEAT_PROJECT_ID',
-			dest="project_id",
-			required=True,
-			default=os.environ.get('OPBEAT_PROJECT_ID')
-		)
 
 		self.parser.add_argument(
 			'-i', '--include-path',
@@ -258,31 +259,22 @@ Defaults to current working directory',
 
 		self.parser.add_argument(
 			'-m', '--module-name',
-			help='Use this as the module name.',
-			default="_repository")
+			help='Use this as the module name.')
 
 		self.parser.add_argument(
 			'--dry-run',
 			help="Don't send anything.  \
-Use '--verbose' to print the request instead.",
+Use '--verbose' to print the request.",
 			action="store_true",
 			dest="dry_run")
 
-		self.parser.add_argument(
-				'--client-id',
-				help="Override OAuth client id (you probably don't need this)",
-				default=os.environ.get(
-				'OPBEAT_CLIENT_ID', CLIENT_ID)
-			)
-
 	def run(self, args):
 		client = build_client(
-			project_id=args.project_id,
+			organization_id=args.organization_id,
+			app_id=args.app_id,
 			server=args.server,
 			logger=self.logger,
-			access_token=args.access_token,
-			config_file=args.config_file,
-			client_id=args.client_id,
+			secret_token=args.secret_token,
 			dry_run=args.dry_run
 		)
 		if not client:
@@ -291,6 +283,6 @@ Use '--verbose' to print the request instead.",
 		self.logger.info("Using directory: %s", args.directory)
 
 		send_deployment_info(client, self.logger, args.include_paths,
-							args.directory, args.module_name)
+							args.directory)
 
 command = DeploymentCommand

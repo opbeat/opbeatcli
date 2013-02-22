@@ -1,6 +1,6 @@
 import unittest
 import os
-from opbeat.credentials import get_default_filename, get_config, save_config, load_credentials, save_credentials
+from opbeatcli.credentials import get_default_filename, get_config, save_config, load_credentials, save_credentials
 from datetime import datetime, timedelta
 
 config_file = "test_config.ini"

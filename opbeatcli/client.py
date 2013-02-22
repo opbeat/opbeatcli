@@ -1,5 +1,5 @@
 """
-opbeat.client
+opbeatcli.client
 ~~~~~~~~~~~~~~~~~~~~
 
 :copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
@@ -11,8 +11,8 @@ Very inspired by the Client in the sentry/raven project.
 
 import logging
 import version
-from opbeat.conf import defaults
-from opbeat.utils import json
+from opbeatcli.conf import defaults
+from opbeatcli.utils import json
 
 import urllib2
 from urlparse import urlparse
@@ -21,27 +21,34 @@ __all__ = ('Client',)
 
 class Client(object):
 	"""
-	The base opbeat client, which handles communication with the
+	The base Opbeat client, which handles communication with the
 	Opbeat servers.
 
 	Will read default configuration from the environment variable
-	``OPBEAT_PROJECT_ID`` and ``OPBEAT_API_KEY`` if available.
+	``OPBEAT_ORGANIZATION_ID``, ``OPBEAT_APP_ID``, ``OPBEAT_SECRET_TOKEN``
+	if available.
 
-	>>> from opbeat import Client
+	>>> from opbeatcli import Client
 
 	>>> # Configure the client
 	>>> client = Client(
-	>>>     project='project_id',
-	>>>     api_key='api_key'
+	>>>     organization_id='org_id',
+	>>>     app_id='app_id'
+	>>>     secret_token='secret_token'
 	>>> )
 
 	>>> # Send some information
 	>>> client.send(**data)
 
 	"""
-	def __init__(self, logger, access_token, server, project_id = None, timeout = None, dry_run = False):
-		self.access_token = access_token
-		self.project_id = project_id
+	def __init__(self, logger,
+		organization_id, app_id, secret_token, server,
+		timeout=None, dry_run=False):
+		
+		self.organization_id = organization_id
+		self.app_id = app_id
+
+		self.secret_token = secret_token
 
 		self.timeout = timeout or defaults.TIMEOUT
 		self.logger = logger
@@ -49,7 +56,7 @@ class Client(object):
 
 		self.server = server
 
-		if not (access_token and server):
+		if not (secret_token and server):
 			msg = 'Missing configuration for client. Please see documentation.'
 			raise TypeError(msg)
 
@@ -58,11 +65,14 @@ class Client(object):
 		Serializes the message and passes the payload onto ``send_encoded``.
 		"""
 
-		if self.project_id and 'project_id' not in data:
-			data['project_id'] = self.project_id
+		if self.organization_id and 'organization_id' not in data:
+			data['organization_id'] = self.organization_id
+
+		if self.app_id and 'app_id' not in data:
+			data['app_id'] = self.app_id
 
 		message = self.encode(data)
-		return self.send_encoded(message,url, auth_header=auth_header)
+		return self.send_encoded(message, url, auth_header=auth_header)
 
 	def send_encoded(self, data, url, auth_header=None):
 		"""
@@ -72,14 +82,14 @@ class Client(object):
 		"""
 
 		if not auth_header:
-			access_token = self.access_token
+			secret_token = self.secret_token
 
-			auth_header = "Bearer %s" % (access_token)
-	
+			auth_header = "Bearer %s" % (secret_token)
+
 		headers = {
 			'Authorization': auth_header,
 			'Content-Type': 'application/json',
-			'User-Agent': 'opbeat/%s' % version.VERSION
+			'User-Agent': 'opbeatcli/%s' % version.VERSION
 		}
 
 		self.send_remote(url=url, data=data, headers=headers)

@@ -1,5 +1,5 @@
 """
-opbeat.credentials
+opbeatcli.credentials
 ~~~~~~~~~~~~~~~~~~~~
 
 :copyright: (c) 2012 by Opbeat, see AUTHORS for more details.

@@ -1,5 +1,5 @@
 """
-opbeat.utils.json
+opbeatcli.utils
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 :copyright: (c) 2012 Opbeat
@@ -8,7 +8,6 @@ opbeat.utils.json
 
 import datetime
 import uuid
-import os
 import sys
 import json
 
@@ -23,8 +22,8 @@ def query_yes_no(question, default="yes"):
 
 	The "answer" return value is one of "yes" or "no".
 	"""
-	valid = {"yes":True,   "y":True,  "ye":True,
-			 "no":False,     "n":False}
+	valid = {"yes": True, "y": True, "ye": True,
+			"no": False, "n": False}
 	if default == None:
 		prompt = " [y/n] "
 	elif default == "yes":
@@ -43,15 +42,8 @@ def query_yes_no(question, default="yes"):
 			return valid[choice]
 		else:
 			sys.stdout.write("Please respond with 'yes' or 'no' "\
-							 "(or 'y' or 'n').\n")
+							"(or 'y' or 'n').\n")
 
-
-def say(words):
-	"""
-		This is really silly.
-	"""
-	if os.path.exists('/usr/bin/say'):
-		os.system("/usr/bin/say %s" % words)
 
 # copyright: (c) 2010 by the Sentry Team, see AUTHORS for more details.
 class BetterJSONEncoder(json.JSONEncoder):

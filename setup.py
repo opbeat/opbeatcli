@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """
-opbeat
+opbeatcli
 =========
 
-opbeat is a command line client for `Opbeat <https://opbeat.com/>`_. It provides
+opbeatcli is a command line client for `Opbeat <https://opbeat.com/>`_. It provides
 access to the Opbeat API through the command line. It is also useful for use in
-your own applications.
+your own applications. "opbeat" is installed as a binary.
 
 """
 
@@ -36,11 +36,11 @@ if sys.version_info[:2] < (2, 7):
 	install_requires.append('argparse')
 
 setup(
-	name='opbeat',
-	version='1.0.2',
+	name='opbeatcli',
+	version='1.1',
 	author='Ron Cohen',
 	author_email='ron@opbeat.com',
-	url='http://github.com/opbeat/opbeat',
+	url='http://github.com/opbeat/opbeatcli',
 	description='opbeat is a client for Opbeat (https://opbeat.com)',
 	long_description=__doc__,
 	packages=find_packages(exclude=("tests",)),
@@ -52,7 +52,7 @@ setup(
 	include_package_data=True,
 	entry_points={
 		'console_scripts': [
-			'opbeat = opbeat.runner:main',
+			'opbeat = opbeatcli.runner:main',
 		],
 	},
 	classifiers=[
