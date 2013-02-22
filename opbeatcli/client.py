@@ -98,7 +98,7 @@ class Client(object):
 		"""
 		Serializes ``data`` into a raw string.
 		"""
-		return json.dumps(data)#.encode('zlib')
+		return json.dumps(data)
 
 	def decode(self, data):
 		"""

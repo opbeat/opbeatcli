@@ -22,8 +22,6 @@ VCS_NAME_MAP = {
 	'svn': 'subversion'
 }
 
-HOSTNAME = socket.gethostname()
-
 
 _VERSION_CACHE = {}
 
@@ -194,7 +192,7 @@ def get_default_module_name(directory):
 		return os.path.basename(directory)
 
 def send_deployment_info(
-	client, logger, include_paths=None,
+	client, logger, hostname, include_paths=None,
 		directory=None, module_name=None):
 	if include_paths:
 		versions = get_versions_from_installed(include_paths)
@@ -219,8 +217,6 @@ def send_deployment_info(
 	# We convert it here. Just ditch the keys.
 	list_versions = [v for k, v in versions.items()]
 
-	hostname = HOSTNAME
-
 	data = {'machine': {'hostname': hostname}, 'releases': list_versions}
 
 	url = client.server + (defaults.DEPLOYMENT_API_PATH.format(
@@ -244,6 +240,12 @@ class DeploymentCommand(CommandBase):
 
 	def add_args(self):
 		super(DeploymentCommand, self).add_args()
+
+		self.parser.add_argument(
+			"--hostname", action="store", dest="hostname",
+			help="Override hostname of current machine. Can be set with environment variable OPBEAT_HOSTNAME",
+			default=os.environ.get('OPBEAT_HOSTNAME', defaults.HOSTNAME)
+		)
 
 		self.parser.add_argument(
 			'-i', '--include-path',
@@ -282,7 +284,7 @@ Use '--verbose' to print the request.",
 		self.logger.info('Sending deployment info...')
 		self.logger.info("Using directory: %s", args.directory)
 
-		send_deployment_info(client, self.logger, args.include_paths,
+		send_deployment_info(client, self.logger, args.hostname, args.include_paths,
 							args.directory)
 
 command = DeploymentCommand
