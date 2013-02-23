@@ -2,11 +2,15 @@ import unittest
 import mock
 import os
 import logging
+import argparse
+
 
 from datetime import datetime, timedelta
 
 from opbeatcli.commands.deployment import (annotate_url_with_ssh_config_info,
-											get_default_module_name)
+											get_default_module_name, DeploymentCommand)
+from opbeatcli.client import Client
+
 logger = logging.getLogger('opbeatcli.tests')
 
 class MockSshConfig(object):
@@ -15,6 +19,47 @@ class MockSshConfig(object):
 			return {'opbeat_python':{'hostname':'github.com'}}[host]
 		except:
 			return {'hostname':host}
+
+
+class FakeArgs(object):
+	def __init__(self, **kwargs):
+		for k, v in kwargs.items():
+			setattr(self, k, v)
+
+class TestRun(unittest.TestCase):
+	@mock.patch("opbeatcli.commands.deployment.send_deployment_info")
+	def test_run(self, send_deployment_info):
+		parser = argparse.ArgumentParser(
+			description="Dummy parser")
+		subparse = parser.add_subparsers()
+
+		cmd = DeploymentCommand(subparse)
+
+		args = FakeArgs(**{
+			'organization_id': 'org_id',
+			'app_id': 'app_id',
+			'secret_token': 'token',
+			'server': 'server',
+			'dry_run': 'dry_run',
+			'module_name': 'module_name',
+			'directory': 'directory',
+			'hostname': 'hostname',
+			'include_paths': 'include_paths'
+		})
+
+		cmd.run_first(args, logger)
+
+		all_args = send_deployment_info.call_args
+
+		positional_args = all_args[0]
+		client = positional_args[0]
+		self.assertTrue(isinstance(client, Client), client)
+
+		self.assertEqual(positional_args[1], logger)
+		self.assertEqual(positional_args[2], args.hostname)
+		self.assertEqual(positional_args[3], args.include_paths)
+		self.assertEqual(positional_args[4], args.directory)
+		self.assertEqual(positional_args[5], args.module_name)
 
 class TestDefaultModuleName(unittest.TestCase):
 	def test_with_slash(self):

@@ -285,6 +285,6 @@ Use '--verbose' to print the request.",
 		self.logger.info("Using directory: %s", args.directory)
 
 		send_deployment_info(client, self.logger, args.hostname, args.include_paths,
-							args.directory)
+							args.directory, args.module_name)
 
 command = DeploymentCommand
