@@ -79,7 +79,7 @@ def get_versions_from_installed(module_list=None):
 def get_version_from_distributions(distributions, logger):
 	result = {}
 	for d in distributions:
-		result[d.key] = {'module': d.key}
+		result[d.key] = {'module': {'name': d.key}}
 
 		if d.has_version():
 			result[d.key]['version'] = d.version
@@ -196,7 +196,7 @@ def send_deployment_info(
 		directory=None, module_name=None):
 	if include_paths:
 		versions = get_versions_from_installed(include_paths)
-		versions = dict([(module, {'module':module, 'version':
+		versions = dict([(module, {'module': {'name': module}, 'version':
 						version}) for module, version in versions.items()])
 	else:
 		versions = {}
@@ -211,7 +211,7 @@ def send_deployment_info(
 		if not module_name:
 			module_name = get_default_module_name(directory)
 
-		versions[module_name] = {'module': module_name, 'vcs': rep_info}
+		versions[module_name] = {'module': {'name': module_name}, 'vcs': rep_info}
 
 	# Versions are returned as a dict of "module":"version"
 	# We convert it here. Just ditch the keys.

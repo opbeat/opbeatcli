@@ -21,6 +21,8 @@ except ImportError:
 import sys
 from setuptools import setup, find_packages
 
+from opbeatcli.version import VERSION
+
 tests_require = [
 	'nose',
 	'mock',
@@ -35,9 +37,11 @@ install_requires = [
 if sys.version_info[:2] < (2, 7):
 	install_requires.append('argparse')
 
+
+
 setup(
 	name='opbeatcli',
-	version='1.1',
+	version=VERSION,
 	author='Ron Cohen',
 	author_email='ron@opbeat.com',
 	url='http://github.com/opbeat/opbeatcli',
