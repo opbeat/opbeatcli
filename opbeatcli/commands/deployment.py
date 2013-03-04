@@ -217,7 +217,7 @@ def send_deployment_info(
 	# We convert it here. Just ditch the keys.
 	list_versions = [v for k, v in versions.items()]
 
-	data = {'machine': {'hostname': hostname}, 'releases': list_versions}
+	data = {'machines': [{'hostname': hostname}], 'releases': list_versions}
 
 	url = client.server + (defaults.DEPLOYMENT_API_PATH.format(
 		client.organization_id, client.app_id))
