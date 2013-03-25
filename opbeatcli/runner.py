@@ -104,11 +104,8 @@ def main():
 				root.setLevel(logging.INFO)
 
 			args.func(args, root)
-		except Exception, ex:
-			if args and args.verbose:
-				root.exception("Error executing command")
-			else:
-				root.error(ex)
+		except Exception:
+			root.exception("Error executing command")
 
 if __name__ == '__main__':
 	main()
