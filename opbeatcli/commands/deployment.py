@@ -107,6 +107,9 @@ def get_version_from_location(location, logger):
 
 		url = annotate_url_with_ssh_config_info(url, logger)
 
+		if backend_cls.name not in VCS_NAME_MAP:
+			return None
+
 		vcs_type = VCS_NAME_MAP[backend_cls.name]
 
 		return {'type': vcs_type, 'revision': rev, 'repository': url}
