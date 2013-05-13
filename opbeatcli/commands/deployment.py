@@ -6,6 +6,7 @@ from opbeatcli.utils.ssh_config import SSHConfig
 
 import pkg_resources
 from pip.vcs import vcs
+from pip.exceptions import InstallationError
 from pip.util import get_installed_distributions
 
 import argparse
@@ -97,22 +98,31 @@ def get_version_from_location(location, logger):
 	backend_cls = vcs.get_backend_from_location(location)
 	if backend_cls:
 		backend = backend_cls()
-		url, rev = backend.get_info(location)
+		try:
+			url = backend.get_url(location)
+		except InstallationError:
+			url = None
+
+		rev = backend.get_revision(location)
 
 		# Mercurial sometimes returns something like
 		# "Not trusting file /home/alice/repo/.hg/hgrc from untrusted user alice, group users"
 		# We'll ignore it for now
-		if len(url) > 250 or len(rev) > 100:
+		if (url and len(url) > 250) or len(rev) > 100:
 			return None
-
-		url = annotate_url_with_ssh_config_info(url, logger)
 
 		if backend_cls.name not in VCS_NAME_MAP:
 			return None
 
 		vcs_type = VCS_NAME_MAP[backend_cls.name]
 
-		return {'type': vcs_type, 'revision': rev, 'repository': url}
+		ret = {'type': vcs_type, 'revision': rev}
+
+		if url:
+			url = annotate_url_with_ssh_config_info(url, logger)
+			ret['repository'] = url
+
+		return ret
 	else:
 		head, tail = os.path.split(location)
 		if head and head != '/':  # TODO: Support windows
@@ -214,7 +224,10 @@ def send_deployment_info(
 		if not module_name:
 			module_name = get_default_module_name(directory)
 
-		versions[module_name] = {'module': {'name': module_name}, 'vcs': rep_info}
+		versions[module_name] = {
+			'module': { 'name': module_name, 'type': 'repository'},
+			'vcs': rep_info
+		}
 
 	# Versions are returned as a dict of "module":"version"
 	# We convert it here. Just ditch the keys.
