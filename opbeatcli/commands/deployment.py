@@ -226,6 +226,7 @@ def send_deployment_info(
 
 		versions[module_name] = {
 			'module': { 'name': module_name, 'type': 'repository'},
+			'full_path': os.path.abspath(directory),
 			'vcs': rep_info
 		}
 
@@ -243,7 +244,7 @@ def send_deployment_info(
 
 class ValidateDirectory(argparse.Action):
 	def __call__(self, parser, args, values, option_string=None):
-		directory = values
+		directory = os.path.abspath(values)
 
 		if not os.path.isdir(directory):
 			raise ValueError('Invalid directory {s!r}'.format(s=directory))
