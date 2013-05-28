@@ -85,7 +85,7 @@ def get_version_from_distributions(distributions, logger):
 		if d.has_version():
 			result[d.key]['version'] = d.version
 
-		vcs_version = get_version_from_location(d.location, logger)
+		vcs_version = get_version_from_location(d.location, logger, recurse=False)
 		if vcs_version:
 			result[d.key]['vcs'] = vcs_version
 
@@ -94,7 +94,7 @@ def get_version_from_distributions(distributions, logger):
 # Recursively try to find vcs.
 
 
-def get_version_from_location(location, logger):
+def get_version_from_location(location, logger, recurse=True):
 	backend_cls = vcs.get_backend_from_location(location)
 	if backend_cls:
 		backend = backend_cls()
@@ -124,17 +124,18 @@ def get_version_from_location(location, logger):
 
 		return ret
 	else:
-		head, tail = os.path.split(location)
-		if head and head != '/':  # TODO: Support windows
-			return get_version_from_location(head, logger)
-		else:
-			return None
+		if recurse:
+			head, tail = os.path.split(location)
+			if head and head != '/':  # TODO: Support windows
+				return get_version_from_location(head, logger, recurse=True)
+			else:
+				return None
 
 
 def get_repository_info(logger, directory=None):
 	if not directory:
 		directory = os.getcwd()
-	cwd_rev_info = get_version_from_location(directory, logger)
+	cwd_rev_info = get_version_from_location(directory, logger, recurse=True)
 	return cwd_rev_info
 
 
@@ -223,12 +224,17 @@ def send_deployment_info(
 	if rep_info:
 		if not module_name:
 			module_name = get_default_module_name(directory)
+		logger.debug("Using repository information from %s for module %s",
+			directory, module_name)
+
 
 		versions[module_name] = {
 			'module': { 'name': module_name, 'type': 'repository'},
 			'full_path': os.path.abspath(directory),
 			'vcs': rep_info
 		}
+	else:
+		logger.debug("Found no repository in %s", directory)
 
 	# Versions are returned as a dict of "module":"version"
 	# We convert it here. Just ditch the keys.
