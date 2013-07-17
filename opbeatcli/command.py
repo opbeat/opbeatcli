@@ -17,51 +17,51 @@ import argparse
 from client import Client
 
 def load_all_commands():
-	return filter(lambda x: x is not None, [load_command(name) for name in command_names()])
-		
-def load_command(name):
-	full_name = 'opbeatcli.commands.%s' % name
+    return filter(lambda x: x is not None, [load_command(name) for name in command_names()])
 
-	try:
-		if full_name not in sys.modules:
-			__import__(full_name)
-	except ImportError, ex:
-		print ex
-	else:
-		return sys.modules[full_name].command
+def load_command(name):
+    full_name = 'opbeatcli.commands.%s' % name
+
+    try:
+        if full_name not in sys.modules:
+            __import__(full_name)
+    except ImportError, ex:
+        print ex
+    else:
+        return sys.modules[full_name].command
 
 def command_names():
-	names = set((pkg[1] for pkg in walk_packages(path=opbeatcli.commands.__path__)))
-	return list(names)
+    names = set((pkg[1] for pkg in walk_packages(path=opbeatcli.commands.__path__)))
+    return list(names)
 
 class CommandBase(object):
-	name = None
-	usage = None
-	hidden = False
-	description = None
+    name = None
+    usage = None
+    hidden = False
+    description = None
 
-	login_required = True
+    login_required = True
 
-	def __init__(self, subparsers):
-		assert self.name
+    def __init__(self, subparsers):
+        assert self.name
 
-		self.parser = subparsers.add_parser(
-			description=self.description,
-			usage = self.usage,
-			name=self.name
-			)
-		
-		self.parser.set_defaults(func=self.run_first)
+        self.parser = subparsers.add_parser(
+            description=self.description,
+            usage = self.usage,
+            name=self.name
+            )
 
-		self.add_args()
+        self.parser.set_defaults(func=self.run_first)
+
+        self.add_args()
 
 
-	def add_args(self):
-		pass
+    def add_args(self):
+        pass
 
-	def run_first(self, args, logger):
-		self.logger = logger
-		self.run(args)
+    def run_first(self, args, logger):
+        self.logger = logger
+        self.run(args)
 
-	def run(self, args):
-		raise NotImplemented
+    def run(self, args):
+        raise NotImplemented
