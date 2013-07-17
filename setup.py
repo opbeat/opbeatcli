@@ -38,7 +38,6 @@ if sys.version_info[:2] < (2, 7):
     install_requires.append('argparse')
 
 
-
 setup(
     name='opbeatcli',
     version=VERSION,

@@ -7,17 +7,16 @@ opbeatcli.client
 
 Very inspired by the Client in the sentry/raven project.
 """
-
-
-import logging
-import version
-from opbeatcli.conf import defaults
-from opbeatcli.utils import json
-
 import urllib2
 from urlparse import urlparse
 
+from opbeatcli import version
+from opbeatcli.conf import defaults
+from opbeatcli.utils import json
+
+
 __all__ = ('Client',)
+
 
 class Client(object):
     """
@@ -41,9 +40,8 @@ class Client(object):
     >>> client.send(**data)
 
     """
-    def __init__(self, logger,
-        organization_id, app_id, secret_token, server,
-        timeout=None, dry_run=False):
+    def __init__(self, logger, organization_id, app_id, secret_token, server,
+                 timeout=None, dry_run=False):
 
         self.organization_id = organization_id
         self.app_id = app_id
@@ -62,9 +60,9 @@ class Client(object):
 
     def send(self, data, url, auth_header=None):
         """
-        Serializes the message and passes the payload onto ``send_encoded``.
-        """
+        Serialize the message and passes the payload onto ``send_encoded``.
 
+        """
         if self.organization_id and 'organization_id' not in data:
             data['organization_id'] = self.organization_id
 
@@ -76,15 +74,15 @@ class Client(object):
 
     def send_encoded(self, data, url, auth_header=None):
         """
-        Given an already serialized message, signs the message and passes the
+        Given an already serialized message, sign the message and passe the
         payload off to ``send_remote`` for each server specified in the servers
         configuration.
-        """
 
+        """
         if not auth_header:
             secret_token = self.secret_token
 
-            auth_header = "Bearer %s" % (secret_token)
+            auth_header = 'Bearer %s' % secret_token
 
         headers = {
             'Authorization': auth_header,
@@ -95,32 +93,33 @@ class Client(object):
         self.send_remote(url=url, data=data, headers=headers)
 
     def encode(self, data):
-        """
-        Serializes ``data`` into a raw string.
-        """
+        """Serialize ``data`` into a raw string."""
         return json.dumps(data)
 
     def decode(self, data):
-        """
-        Unserializes a string, ``data``.
-        """
+        """Un-serialize a string, ``data``."""
         return json.loads(data.decode('zlib'))
 
-    def _send_remote(self, url, data, headers={}):
+    def _send_remote(self, url, data, headers=None):
+
+        if headers is None:
+            headers = {}
+
         parsed = urlparse(url)
         transport = self._registry.get_transport(parsed)
         return transport.send(data, headers)
 
-    def send_remote(self, url, data, headers={}):
-        self.logger.debug("Sending: %s", data)
+    def send_remote(self, url, data, headers=None):
+        """Send a request to a remote webserver using HTTP POST."""
+        if headers is None:
+            headers = {}
+
+        self.logger.debug('Sending: %s', data)
 
         if self.dry_run:
             return None
 
         try:
-            """
-            Sends a request to a remote webserver using HTTP POST.
-            """
             req = urllib2.Request(url, headers=headers)
             response = urllib2.urlopen(req, data, self.timeout).read()
 
@@ -129,8 +128,11 @@ class Client(object):
         except Exception, e:
             if isinstance(e, urllib2.HTTPError):
                 body = e.read()
-                self.logger.error('Unable to reach Opbeat server: %s (url: %%s, body: %%s)' % (e,), url, body,
-                    exc_info=True)
+                self.logger.error(
+                    'Unable to reach Opbeat server: %s (url: %%s, body: %%s)'
+                    % (e,), url, body,
+                    exc_info=True
+                )
             else:
                 tmpl = 'Unable to reach Opbeat server: %s (url: %%s)'
                 self.logger.error(tmpl % (e,), url, exc_info=True)

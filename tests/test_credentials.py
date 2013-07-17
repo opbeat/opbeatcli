@@ -1,15 +1,24 @@
-import unittest
 import os
-from opbeatcli.credentials import get_default_filename, get_config, save_config, load_credentials, save_credentials
+import unittest
 from datetime import datetime, timedelta
 
-config_file = "test_config.ini"
+from opbeatcli.credentials import (
+    get_default_filename,
+    get_config,
+    load_credentials,
+    save_credentials
+)
+
+
+config_file = 'test_config.ini'
+
 
 class TestCredentials(unittest.TestCase):
+
     def setUp(self):
         try:
             os.remove(config_file)
-        except:
+        except IOError:
             pass
 
     def tearDown(self):
@@ -25,10 +34,9 @@ class TestCredentials(unittest.TestCase):
         self.assertRaises(IOError, get_config, config_file)
 
     def test_get_config_basic(self):
-        value = "Avalue"
-        f = open(config_file,'w')
-        f.write(
-"""
+        value = 'Avalue'
+        f = open(config_file, 'w')
+        f.write("""
 [justtesting]
 akey = %s
 """ % value)
@@ -36,21 +44,21 @@ akey = %s
 
         config = get_config(config_file)
 
-        self.assertEqual(config.get("justtesting", "akey"), value)
+        self.assertEqual(config.get('justtesting', 'akey'), value)
 
     def test_save_access_token(self):
-        access_token = "ac_token"
-        refresh_token = "re_token"
+        access_token = 'ac_token'
+        refresh_token = 're_token'
         expires = datetime.now() + timedelta(days=1)
 
         save_credentials(access_token, refresh_token, expires, config_file)
 
     def test_save_and_load_access_token(self):
-        access_token = "ac_token"
+        access_token = 'ac_token'
         expires = datetime.now().replace(microsecond=0) + timedelta(days=1)
-        refresh_token = "re_token"
+        refresh_token = 're_token'
 
-        save_credentials(access_token, refresh_token,expires, config_file)
+        save_credentials(access_token, refresh_token, expires, config_file)
 
         credentials = load_credentials(config_file)
 

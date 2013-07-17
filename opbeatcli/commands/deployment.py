@@ -1,20 +1,17 @@
-from opbeatcli.command import CommandBase
-from opbeatcli.runner import build_client
-from opbeatcli.conf import defaults
-from opbeatcli.conf.defaults import CLIENT_ID
-from opbeatcli.utils.ssh_config import SSHConfig
-
+import os
+import sys
+import argparse
 import pkg_resources
+from os.path import expanduser
+
 from pip.vcs import vcs
 from pip.exceptions import InstallationError
 from pip.util import get_installed_distributions
 
-import argparse
-import sys
-import os
-import socket
-
-from os.path import expanduser
+from opbeatcli.command import CommandBase
+from opbeatcli.runner import build_client
+from opbeatcli.conf import defaults
+from opbeatcli.utils.ssh_config import SSHConfig
 
 
 VCS_NAME_MAP = {
