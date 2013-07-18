@@ -2,8 +2,7 @@ import os
 import logging
 import unittest
 
-from opbeatcli.client import Client
-from opbeatcli.credentials import get_config
+from opbeatcli.client import OpbeatClient
 
 
 logger = logging.getLogger('opbeatcli.tests')
@@ -32,7 +31,7 @@ class TestClient(unittest.TestCase):
             pass
 
     def test_setup_client_basic(self):
-        client = Client(logger, ORGANIZATION_ID, APP_ID, SECRET_TOKEN, SERVER)
+        client = OpbeatClient(logger, ORGANIZATION_ID, APP_ID, SECRET_TOKEN, SERVER)
         self.assertEqual(client.logger, logger)
         self.assertEqual(client.secret_token, SECRET_TOKEN)
         self.assertEqual(client.server, SERVER)
@@ -40,7 +39,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(client.dry_run, False)
 
     def test_setup_client_with_orgid_and_timeout(self):
-        client = Client(
+        client = OpbeatClient(
             logger=logger,
             organization_id=ORGANIZATION_ID,
             app_id=APP_ID,
@@ -60,7 +59,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(client.dry_run, False)
 
     def test_setup_client_with_orgid_and_timeout_and_dryrun(self):
-        client = Client(
+        client = OpbeatClient(
             logger=logger,
             organization_id=ORGANIZATION_ID,
             app_id=APP_ID,

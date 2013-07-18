@@ -1,4 +1,5 @@
 *.pyc
-opbeatcli.egg-info
+*.egg/
+*.egg-info/
 
 

@@ -1,10 +1,6 @@
 """
-opbeatcli.conf.defaults
-~~~~~~~~~~~~~~~~~~~
+Default values for all Opbeat settings.
 
-Represents the default values for all Opbeat settings.
-
-:copyright: (c) 2011-2012 Opbeat
 """
 
 import os
@@ -17,7 +13,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 SERVER = 'https://opbeat.com'
 
 # Deployment Tracking API path
-DEPLOYMENT_API_PATH = '/api/v1/organizations/{0}/apps/{1}/deployments/'
+DEPLOYMENT_API_URI = \
+    '/api/v1/organizations/{organization_id}/apps/{app_id}/deployments/'
 
 TIMEOUT = 10
 

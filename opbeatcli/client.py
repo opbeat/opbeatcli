@@ -1,138 +1,120 @@
-"""
-opbeatcli.client
-~~~~~~~~~~~~~~~~~~~~
+import logging
 
-:copyright: (c) 2012 by Opbeat, see AUTHORS for more details.
-:license: BSD, see LICENSE for more details.
+import requests
 
-Very inspired by the Client in the sentry/raven project.
-"""
-import urllib2
-from urlparse import urlparse
-
-from opbeatcli import version
-from opbeatcli.conf import defaults
+from opbeatcli import __version__
 from opbeatcli.utils import json
+from opbeatcli import settings
+from opbeatcli.exceptions import (
+    OpbeatClientConnectionError,
+    OpbeatClientHTTPError
+)
 
 
-__all__ = ('Client',)
-
-
-class Client(object):
+class OpbeatClient(object):
     """
-    The base Opbeat client, which handles communication with the
+    The Opbeat client, which handles communication with the
     Opbeat servers.
 
-    Will read default configuration from the environment variable
-    ``OPBEAT_ORGANIZATION_ID``, ``OPBEAT_APP_ID``, ``OPBEAT_SECRET_TOKEN``
-    if available.
-
-    >>> from opbeatcli import Client
-
-    >>> # Configure the client
-    >>> client = Client(
-    >>>     organization_id='org_id',
-    >>>     app_id='app_id'
-    >>>     secret_token='secret_token'
-    >>> )
-
-    >>> # Send some information
-    >>> client.send(**data)
-
     """
-    def __init__(self, logger, organization_id, app_id, secret_token, server,
-                 timeout=None, dry_run=False):
+    def __init__(self, secret_token, organization_id, app_id,
+                 logger, server=settings.SERVER,
+                 timeout=settings.TIMEOUT, dry_run=False):
 
+        self.server = server
+        self.secret_token = secret_token
         self.organization_id = organization_id
         self.app_id = app_id
 
-        self.secret_token = secret_token
-
-        self.timeout = timeout or defaults.TIMEOUT
+        self.timeout = timeout
         self.logger = logger
         self.dry_run = dry_run
 
-        self.server = server
+        logger.info('Opbeat client configuration:')
+        for k in ['server', 'organization_id', 'app_id']:
+            logger.info('  %16s: %s' % (k, getattr(self, k)))
 
-        if not (secret_token and server):
-            msg = 'Missing configuration for client. Please see documentation.'
-            raise TypeError(msg)
-
-    def send(self, data, url, auth_header=None):
+    def post(self, uri, data):
         """
-        Serialize the message and passes the payload onto ``send_encoded``.
+        HTTP POST ``data`` as JSON to collection identified by ``uri``.
 
-        """
-        if self.organization_id and 'organization_id' not in data:
-            data['organization_id'] = self.organization_id
+        :param uri:
+            The collection URI. It can be in the form of a URI template
+            with the variables {organization_id} and {app_id}, e.g.:
 
-        if self.app_id and 'app_id' not in data:
-            data['app_id'] = self.app_id
+                /api/{organization_id}/apps/{app_id}/deployments/
 
-        message = self.encode(data)
-        return self.send_encoded(message, url, auth_header=auth_header)
-
-    def send_encoded(self, data, url, auth_header=None):
-        """
-        Given an already serialized message, sign the message and passe the
-        payload off to ``send_remote`` for each server specified in the servers
-        configuration.
+        :param data: the data to be send
+        :type data: dict
 
         """
-        if not auth_header:
-            secret_token = self.secret_token
-
-            auth_header = 'Bearer %s' % secret_token
+        uri = uri.format(
+            organization_id=self.organization_id,
+            app_id=self.app_id
+        )
+        url = self.server + uri
 
         headers = {
-            'Authorization': auth_header,
+            'User-Agent': 'opbeatcli/%s' % __version__,
+            'Authorization': 'Bearer %s' % self.secret_token,
             'Content-Type': 'application/json',
-            'User-Agent': 'opbeatcli/%s' % version.VERSION
         }
 
-        self.send_remote(url=url, data=data, headers=headers)
+        data = dict(
+            data,
+            organization_id=self.organization_id,
+            app_id=self.app_id
+        )
 
-    def encode(self, data):
-        """Serialize ``data`` into a raw string."""
-        return json.dumps(data)
+        payload = json.dumps(data, indent=2, sort_keys=True)
 
-    def decode(self, data):
-        """Un-serialize a string, ``data``."""
-        return json.loads(data.decode('zlib'))
-
-    def _send_remote(self, url, data, headers=None):
-
-        if headers is None:
-            headers = {}
-
-        parsed = urlparse(url)
-        transport = self._registry.get_transport(parsed)
-        return transport.send(data, headers)
-
-    def send_remote(self, url, data, headers=None):
-        """Send a request to a remote webserver using HTTP POST."""
-        if headers is None:
-            headers = {}
-
-        self.logger.debug('Sending: %s', data)
+        self.logger.debug('> Server: %s', self.server)
+        self.logger.debug('> HTTP/1.1 POST %s', uri)
+        self.logger.debug('> %s', payload)
 
         if self.dry_run:
-            return None
+            self.logger.info('Not sending because --dry-run.')
+            return
 
         try:
-            req = urllib2.Request(url, headers=headers)
-            response = urllib2.urlopen(req, data, self.timeout).read()
+            response = requests.post(
+                url=url,
+                data=payload,
+                headers=headers,
+                timeout=self.timeout,
+            )
+        except requests.Timeout as e:
+            self.logger.error(
+                'connection error: request timed out'
+                ' (--timeout=%f)',
+                self.timeout
+            )
+            self.logger.debug('request failed', exc_info=True)
+            raise OpbeatClientConnectionError(e)
+        except requests.ConnectionError as e:
+            self.logger.error(
+                'connection error: Unable to reach Opbeat server: %s',
+                url,
+            )
+            self.logger.debug('request failed', exc_info=True)
+            raise OpbeatClientConnectionError(e)
+        except Exception:
+            raise  # Unexpected error, not handled here.
+        else:
 
-            self.logger.debug("Got: %s", response)
-            return response
-        except Exception, e:
-            if isinstance(e, urllib2.HTTPError):
-                body = e.read()
-                self.logger.error(
-                    'Unable to reach Opbeat server: %s (url: %%s, body: %%s)'
-                    % (e,), url, body,
-                    exc_info=True
+            def log_response(level):
+                self.logger.log(
+                    level,
+                    '< HTTP %d %s',
+                    response.status_code,
+                    response.reason
                 )
+                self.logger.log(level, '< %s', response.text)
+
+            if response.status_code >= 400:
+                log_response(logging.ERROR)
+                raise OpbeatClientHTTPError(response.status_code)
+
             else:
-                tmpl = 'Unable to reach Opbeat server: %s (url: %%s)'
-                self.logger.error(tmpl % (e,), url, exc_info=True)
+                log_response(logging.DEBUG)
+                return json.loads(response.text)

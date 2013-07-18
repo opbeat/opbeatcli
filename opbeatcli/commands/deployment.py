@@ -8,10 +8,9 @@ from pip.vcs import vcs
 from pip.exceptions import InstallationError
 from pip.util import get_installed_distributions
 
-from opbeatcli.command import CommandBase
-from opbeatcli.runner import build_client
-from opbeatcli.conf import defaults
+from opbeatcli import settings
 from opbeatcli.utils.ssh_config import SSHConfig
+from .base import CommandBase
 
 
 VCS_NAME_MAP = {
@@ -22,6 +21,64 @@ VCS_NAME_MAP = {
 
 
 _VERSION_CACHE = {}
+
+
+class DeploymentCommand(CommandBase):
+
+    name = 'deployment'
+    description = 'Send deployment info.'
+
+    def run(self):
+
+        self.logger.info('Sending deployment info...')
+        self.logger.info('Using directory: %s', self.args.directory)
+
+        send_deployment_info(
+            client=self.client,
+            logger=self.logger,
+            hostname=self.args.hostname,
+            include_paths=self.args.include_paths,
+            directory=self.args.directory,
+            module_name=self.args.module_name
+        )
+
+    @classmethod
+    def add_command_args(cls, subparser):
+
+        subparser.add_argument(
+            '--hostname',
+            action='store',
+            dest='hostname',
+            default=os.environ.get('OPBEAT_HOSTNAME', settings.HOSTNAME),
+            help='Override hostname of current machine. '
+                 'Can be set with environment variable OPBEAT_HOSTNAME',
+        )
+
+        subparser.add_argument(
+            '-i', '--include-path',
+            help='Search this directory.',
+            dest='include_paths'
+        )
+        subparser.add_argument(
+            '-d', '--directory',
+            dest='directory',
+            default=os.getcwd(),
+            action=ValidateDirectory,
+            help='Take repository information from this directory.'
+                 ' settings to current working directory',
+        )
+
+        subparser.add_argument(
+            '-m', '--module-name',
+            help='Use this as the module name.',
+        )
+
+        subparser.add_argument(
+            '--dry-run',
+            action='store_true',
+            dest='dry_run',
+            help="Don't send anything. Use --verbose to print the request.",
+        )
 
 
 def get_versions_from_installed(module_list=None):
@@ -202,6 +259,7 @@ def get_default_module_name(directory):
     else:
         return os.path.basename(directory)
 
+
 def send_deployment_info(
     client, logger, hostname, include_paths=None,
         directory=None, module_name=None):
@@ -239,10 +297,7 @@ def send_deployment_info(
 
     data = {'machines': [{'hostname': hostname}], 'releases': list_versions}
 
-    url = client.server + (defaults.DEPLOYMENT_API_PATH.format(
-        client.organization_id, client.app_id))
-
-    return client.send(url=url, data=data)
+    return client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
 
 
 class ValidateDirectory(argparse.Action):
@@ -252,59 +307,3 @@ class ValidateDirectory(argparse.Action):
         if not os.path.isdir(directory):
             raise ValueError('Invalid directory {s!r}'.format(s=directory))
         setattr(args, 'directory', directory)
-
-
-class DeploymentCommand(CommandBase):
-    name = "deployment"
-    description = "Sends deployment info ASAP."
-
-    def add_args(self):
-        super(DeploymentCommand, self).add_args()
-
-        self.parser.add_argument(
-            "--hostname", action="store", dest="hostname",
-            help="Override hostname of current machine. Can be set with environment variable OPBEAT_HOSTNAME",
-            default=os.environ.get('OPBEAT_HOSTNAME', defaults.HOSTNAME)
-        )
-
-        self.parser.add_argument(
-            '-i', '--include-path',
-            help='Search this directory.',
-            dest="include_paths")
-        self.parser.add_argument(
-            '-d', '--directory',
-            help='Take repository information from this directory.  \
-Defaults to current working directory',
-            dest="directory",
-            default=os.getcwd(),
-            action=ValidateDirectory)
-
-        self.parser.add_argument(
-            '-m', '--module-name',
-            help='Use this as the module name.')
-
-        self.parser.add_argument(
-            '--dry-run',
-            help="Don't send anything.  \
-Use '--verbose' to print the request.",
-            action="store_true",
-            dest="dry_run")
-
-    def run(self, args):
-        client = build_client(
-            organization_id=args.organization_id,
-            app_id=args.app_id,
-            server=args.server,
-            logger=self.logger,
-            secret_token=args.secret_token,
-            dry_run=args.dry_run
-        )
-        if not client:
-            return
-        self.logger.info('Sending deployment info...')
-        self.logger.info("Using directory: %s", args.directory)
-
-        send_deployment_info(client, self.logger, args.hostname, args.include_paths,
-                            args.directory, args.module_name)
-
-command = DeploymentCommand
