@@ -9,25 +9,41 @@ from setuptools import setup
 
 from opbeatcli import __version__
 
+try:
+    # Python 2.6 workaround to prevent:
+    #     "TypeError: 'NoneType' object is not callable"
+    #      in multiprocessing/util.py _exit_function
+    # when running `python setup.py test`
+    # <http://www.eby-sarna.com/pipermail/peak/2010-May/003357.html>
+    # noinspection PyUnresolvedReferences
+    import multiprocessing
+except ImportError:
+    pass
 
-tests_require = [
-    'nose',
-    'mock',
-    'unittest2',
-]
 
-install_requires = [
-    'requests',
-    'pip==1.2.1'
-]
+with open('README.rst') as f:
+    long_description = f.read().strip()
 
 
+with open('requirements.txt') as f:
+    install_requires = f.read().strip().splitlines()
 try:
     # noinspection PyUnresolvedReferences
     import argparse
 except ImportError:
     install_requires.append('argparse')
 
+
+with open('requirements-tests.txt') as f:
+    tests_require = f.read().strip().splitlines()
+
+try:
+    # noinspection PyUnresolvedReferences
+    import unittest
+    # noinspection PyStatementEffect
+    unittest.TestCase.assertDictContainsSubset
+except (ImportError, AttributeError):
+    tests_require.append('unittest2')
 
 setup(
     name='opbeatcli',
@@ -36,7 +52,7 @@ setup(
     author_email='ron@opbeat.com',
     url='http://github.com/opbeat/opbeatcli',
     description=__doc__.strip(),
-    long_description=open('README.rst').read().strip(),
+    long_description=long_description,
     packages=['opbeatcli'],
     zip_safe=False,
     install_requires=install_requires,

@@ -7,11 +7,11 @@ import logging
 
 from opbeatcli.log import root_logger
 from opbeatcli.cli import parser
-from opbeatcli.exceptions import OpbeatClientConnectionError
+from opbeatcli.exceptions import OpbeatError, ClientConnectionError
 
 
-SUCCESS, ERROR = 0, 1
-REQUEST_ERROR, SERVER_ERROR = 4, 5
+EXIT_SUCCESS, EXIT_ERROR = 0, 1
+EXIT_CLIENT_ERROR, EXIT_SERVER_ERROR = 4, 5
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
 
     if len(sys.argv) < 2:
         parser.print_help()
-        return SUCCESS
+        return EXIT_SUCCESS
 
     args = parser.parse_args()
 
@@ -30,19 +30,21 @@ def main():
 
     try:
         command.run()
-    except OpbeatClientConnectionError as e:
+    except ClientConnectionError as e:
         # The error has already been logged by the client.
         response_status = e.args[0]
         if response_status < 400:
-            return REQUEST_ERROR
+            return EXIT_CLIENT_ERROR
         else:
-            return SERVER_ERROR
-
+            return EXIT_SERVER_ERROR
+    except OpbeatError:
+        # The error has already been logged by the client.
+        return EXIT_ERROR
     except Exception:
         root_logger.exception('Error executing command')
-        return ERROR
+        return EXIT_ERROR
     else:
-        return SUCCESS
+        return EXIT_SUCCESS
 
 
 if __name__ == '__main__':

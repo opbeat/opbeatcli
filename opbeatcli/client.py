@@ -1,3 +1,7 @@
+"""
+Opbeat log API client.
+
+"""
 import logging
 
 import requests
@@ -6,8 +10,8 @@ from opbeatcli import __version__
 from opbeatcli.utils import json
 from opbeatcli import settings
 from opbeatcli.exceptions import (
-    OpbeatClientConnectionError,
-    OpbeatClientHTTPError
+    ClientConnectionError,
+    ClientHTTPError
 )
 
 
@@ -90,14 +94,14 @@ class OpbeatClient(object):
                 self.timeout
             )
             self.logger.debug('request failed', exc_info=True)
-            raise OpbeatClientConnectionError(e)
+            raise ClientConnectionError(e)
         except requests.ConnectionError as e:
             self.logger.error(
                 'connection error: Unable to reach Opbeat server: %s',
                 url,
             )
             self.logger.debug('request failed', exc_info=True)
-            raise OpbeatClientConnectionError(e)
+            raise ClientConnectionError(e)
         except Exception:
             raise  # Unexpected error, not handled here.
         else:
@@ -113,7 +117,7 @@ class OpbeatClient(object):
 
             if response.status_code >= 400:
                 log_response(logging.ERROR)
-                raise OpbeatClientHTTPError(response.status_code)
+                raise ClientHTTPError(response.status_code)
 
             else:
                 log_response(logging.DEBUG)
