@@ -26,7 +26,7 @@ def main():
     root_logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
     Command = args.command_class
-    command = Command(args=args, logger=root_logger)
+    command = Command(parser=parser, args=args, logger=root_logger)
 
     try:
         command.run()
@@ -37,8 +37,8 @@ def main():
             return EXIT_CLIENT_ERROR
         else:
             return EXIT_SERVER_ERROR
-    except OpbeatError:
-        # The error has already been logged by the client.
+    except OpbeatError as e:
+        root_logger.error(e.message)
         return EXIT_ERROR
     except Exception:
         root_logger.exception('Error executing command')

@@ -82,6 +82,6 @@ common.add_argument(
 
 subparsers = parser.add_subparsers()
 for name, Command in COMMANDS.items():
-    command_parser = subparsers.add_parser(name=name)
-    Command.add_command_args(command_parser)
-    command_parser.set_defaults(command_class=Command)
+    subparser = subparsers.add_parser(name=name)
+    Command.add_command_args(subparser)
+    subparser.set_defaults(command_class=Command)

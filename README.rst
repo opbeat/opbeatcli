@@ -39,10 +39,10 @@ commands:
 
 .. code-block:: bash
 
-    $ opbeat [OPTIONS] deployment [-d DIRECTORY] [-m MODULE_NAME]
+    $ opbeat [OPTIONS] deployment
 
-Notifies Opbeat about version of installed software. By default,
-it will collect all available python modules.
+Notifies Opbeat about version of installed software. By default, it will
+collect all available python modules.
 
 It will also check if the current working directory (override with ``-d``) is a
 Subversion, Git or Mercurial repository. If this is the case, the most recent

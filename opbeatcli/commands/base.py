@@ -5,7 +5,14 @@ class CommandBase(object):
 
     description = None
 
-    def __init__(self, args, logger):
+    def __init__(self, parser, args, logger):
+        """
+        :type parser: argparse.ArgumentParser
+        :type args: argparse.Namespace
+        :type logger: logging.Logger
+
+        """
+        self.parser = parser
         self.args = args
         self.logger = logger
 

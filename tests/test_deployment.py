@@ -17,25 +17,41 @@ class TestComponentFromSpec(unittest.TestCase):
         self.assertDictContainsSubset(component.__dict__, attributes)
 
     def test_component_from_spec_with_path_only(self):
-        self.assert_spec_parsed_into('/app', {
-            'path': '/app',
-            'name': 'app',
-            'version': None,
-        })
+        self.assert_spec_parsed_into(
+            {
+                'path': '/app'
+            },
+            {
+                'path': '/app',
+                'name': 'app',
+                'version': None,
+            }
+        )
 
     def test_component_from_spec_with_path_name_and_version(self):
-        self.assert_spec_parsed_into('/app:my-app@v1.0', {
-            'path': '/app',
-            'name': 'my-app',
-            'version': 'v1.0',
-        })
+        self.assert_spec_parsed_into(
+            {
+                'path': '/app',
+                'name': 'my-app',
+                'version': 'v1.0'
+            },
+            {
+                'path': '/app',
+                'name': 'my-app',
+                'version': 'v1.0',
+            }
+        )
 
     def test_component_from_spec_with_path_and_version(self):
-        self.assert_spec_parsed_into('/app@v1.0', {
-            'path': '/app',
-            'name': 'app',
-            'version': 'v1.0',
-        })
+        self.assert_spec_parsed_into(
+            {
+                '/app': 'v1.0'
+            }, {
+                'path': '/app',
+                'name': 'app',
+                'version': 'v1.0',
+            }
+        )
 
     def test_component_from_spec_with_relative_path(self):
         self.assert_spec_parsed_into('..', {

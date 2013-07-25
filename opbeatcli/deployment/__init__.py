@@ -4,15 +4,12 @@ from .packages import Component
 from opbeatcli.deployment.stacks import python
 
 
-REPO_SPEC_RE = Component.REPO_SPEC_RE
-
-
-def get_deployment_data(local_hostname, repo_specs):
+def get_deployment_data(local_hostname, repo_specs, local_repo_specs):
     """"""
 
     packages = chain(
         get_requirements(),
-        get_components(repo_specs)
+        get_components(repo_specs, local_repo_specs)
     )
 
     return {
@@ -31,6 +28,10 @@ def get_requirements():
     return python.get_installed_requirements()
 
 
-def get_components(repo_specs):
+def get_components(repo_specs, local_repo_specs):
+
     for repo_spec in repo_specs:
         yield Component.from_repo_spec(repo_spec)
+
+    for local_repo_spec in local_repo_specs:
+        yield Component.from_local_repo_spec(local_repo_spec)

@@ -1,3 +1,6 @@
+import argparse
+
+
 class OpbeatError(Exception):
     """
     Our base exception. It's not shown to the user, because it's assumed
@@ -6,7 +9,7 @@ class OpbeatError(Exception):
     """
 
 
-class InvalidArgumentError(OpbeatError):
+class InvalidArgumentError(OpbeatError, argparse.ArgumentTypeError):
     """Invalid command line argument"""
 
 

@@ -7,7 +7,7 @@ import os
 import re
 
 from opbeatcli.exceptions import InvalidArgumentError
-from .vcs import VCSInfo, find_vcs_root
+from .vcs import VCSInfo, find_vcs_root, VCS_NAME_MAP
 
 
 PYTHON_PACKAGE = 'python'
@@ -34,17 +34,11 @@ class BasePackage(object):
 
     package_type = None
 
-    def __init__(self, path, name=None, version=None):
+    def __init__(self, name, version=None, vcs_info=None):
         assert self.package_type in PACKAGE_TYPES
-        self.path = os.path.abspath(path)
-        self.name = name or os.path.basename(self.path.rstrip(os.pathsep))
-        if not self.name:
-            # Edge case: happens when `name` bit specified and `path` is '/'.
-            raise InvalidArgumentError('Missing package name')
+        self.name = name
         self.version = version
-
-    def get_vcs_info(self):
-        return VCSInfo.from_path(self.path)
+        self.vcs_info = vcs_info
 
     def to_json(self):
         data = {
@@ -54,9 +48,8 @@ class BasePackage(object):
             },
             'version': self.version
         }
-        vcs_info = self.get_vcs_info()
-        if vcs_info:
-            data['vcs'] = vcs_info.to_json()
+        if self.vcs_info:
+            data['vcs'] = self.vcs_info.to_json()
 
         return data
 
@@ -89,26 +82,35 @@ class Component(BasePackage):
     """
     package_type = COMPONENT_PACKAGE
 
-    REPO_SPEC_RE = re.compile(
-        """
-        ^
-        (?P<path>[^:@]+)
-        (:(?P<name>[^:@]+))?
-        (@(?P<version>[^:@]+))?
-        $
-        """,
-        re.VERBOSE
-    )
+    @classmethod
+    def from_local_repo_spec(cls, spec):
 
-    def get_vcs_info(self):
-        vcs_root = find_vcs_root(self.path)
+        vcs_info = None
+        path = spec.pop('path')
+        path = os.path.abspath(os.path.expanduser(path))
+        name = spec.pop('name') or os.path.basename(path.rstrip(os.path.sep))
+        vcs_root = find_vcs_root(path)
         if vcs_root:
-            return VCSInfo.from_path(vcs_root)
+            vcs_info = VCSInfo.from_path(vcs_root)
+        return cls(vcs_info=vcs_info, name=name, **spec)
 
     @classmethod
     def from_repo_spec(cls, spec):
-        match = cls.REPO_SPEC_RE.match(spec)
-        if not match:
-            raise InvalidArgumentError('Invalid repo spec: %r' % spec)
-        kwargs = match.groupdict()
-        return cls(**kwargs)
+        vcs = {
+            'vcs_type': spec.pop('vcs'),
+            'branch': spec.pop('branch'),
+            'rev': spec.pop('rev'),
+            'remote_url': spec.pop('remote_url'),
+        }
+
+        vcs_info = None
+        if not spec['version'] and not (vcs['vcs_type'] and vcs['rev']):
+            raise InvalidArgumentError(
+                '--repo has to have at least either "version",'
+                ' or both "vcs" and "rev"'
+            )
+
+        if any(vcs.values()):
+            vcs_info = VCSInfo(**vcs)
+
+        return cls(vcs_info=vcs_info, **spec)

@@ -5,6 +5,7 @@ Python requirements and their discovery.
 from pip.util import get_installed_distributions
 
 from ..packages import BaseRequirement, PYTHON_PACKAGE
+from ..vcs import VCSInfo
 
 
 def get_installed_requirements():
@@ -26,6 +27,6 @@ class PythonRequirement(BaseRequirement):
         version = distribution.version if distribution.has_version() else None
         return cls(
             name=distribution.key,
-            path=distribution.location,
             version=version,
+            vcs_info=VCSInfo.from_path(distribution.location),
         )

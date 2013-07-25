@@ -1,6 +1,7 @@
 import os
 
 from pip.vcs import vcs
+from opbeatcli.exceptions import InvalidArgumentError
 
 from opbeatcli.utils.ssh_config import SSHConfig
 
@@ -34,6 +35,16 @@ def is_vcs_root(path):
 class VCSInfo(object):
 
     def __init__(self, rev, vcs_type=None, branch=None, remote_url=None):
+
+        types = list(VCS_NAME_MAP.values())
+
+        if vcs_type not in types:
+            raise InvalidArgumentError(
+                'invalid VCS type %r, it has to be one of %s' % (
+                    vcs_type,
+                    ', '.join(types),
+                )
+            )
         self.vcs_type = vcs_type
         self.rev = rev
         self.branch = branch
