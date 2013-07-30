@@ -4,16 +4,18 @@ from collections import namedtuple, defaultdict
 
 from opbeatcli import settings
 from opbeatcli.deployment import get_deployment_data
+from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.exceptions import InvalidArgumentError
 from .base import CommandBase
 
 
 class KeyValue(namedtuple('BaseKeyValue', ['key', 'value'])):
+    """A key-value tuple."""
 
     @classmethod
     def from_string(cls, string):
         try:
-            key, value = string.split('=', 1)
+            key, value = string.split(':', 1)
             if not (key and value):
                 raise ValueError()
         except ValueError:
@@ -61,7 +63,7 @@ class RepoSpecValidator(object):
         if missing_keys:
             raise InvalidArgumentError(
                 'missing keys : %s'
-                % ', '.join(unknown_keys)
+                % ', '.join(missing_keys)
             )
         if has_duplicate_keys:
             counter = defaultdict(int)
@@ -82,15 +84,16 @@ class RepoSpecValidator(object):
         return spec
 
 
-repo_spec_validator = RepoSpecValidator(
+get_repo_spec = RepoSpecValidator(
     name=True,
     vcs=False,
     remote_url=False,
     branch=False,
+    # One of these two is required.
     rev=False,
     version=False
 )
-local_repo_spec_validator = RepoSpecValidator(
+get_local_repo_spec = RepoSpecValidator(
     path=True,
     name=False,
     version=False
@@ -137,11 +140,11 @@ class DeploymentCommand(CommandBase):
             data = get_deployment_data(
                 local_hostname=self.args.hostname,
                 local_repo_specs=map(
-                    local_repo_spec_validator,
+                    get_local_repo_spec,
                     local_repo_specs
                 ),
                 repo_specs=map(
-                    repo_spec_validator,
+                    get_repo_spec,
                     repo_specs or []
                 ),
             )
@@ -157,12 +160,20 @@ class DeploymentCommand(CommandBase):
 
         """
         subparser.add_argument(
+            '--dry-run',
+            action='store_true',
+            dest='dry_run',
+            help="Don't send anything. Use --verbose to print the request.",
+        )
+        subparser.add_argument(
             '--hostname',
             action='store',
             dest='hostname',
             default=os.environ.get('OPBEAT_HOSTNAME', settings.HOSTNAME),
-            help='Override hostname of current machine. '
-                 'Can be set with environment variable OPBEAT_HOSTNAME',
+            help="""
+Override hostname of current machine. Can be set with environment variable
+OPBEAT_HOSTNAME
+            """,
         )
         subparser.add_argument(
             '--local-repo',
@@ -171,7 +182,23 @@ class DeploymentCommand(CommandBase):
             nargs=argparse.ZERO_OR_MORE,
             metavar='LOCAL_REPO_SPEC',
             type=KeyValue.from_string,
-            help='',
+            help="""
+                A local VCS repository that is part of the app being deployed.
+
+                Attributes:
+
+                    path:<local-path>
+                    name:<custom-name>
+                    version:<version-string>
+
+                Only path is required. If name isn't specified, the directory
+                name included in path will be used instead. Examples:
+
+                    --local-repo path:/www/app
+                    --local-repo path:/www/app2 name:my-app2
+                    --local-repo path:/www/app3 name:my-app3 version:1.0.0
+
+            """
         )
         subparser.add_argument(
             '--repo',
@@ -180,13 +207,28 @@ class DeploymentCommand(CommandBase):
             metavar='REPO_SPEC',
             action='append',
             type=KeyValue.from_string,
-            help='',
-        )
-        subparser.add_argument(
-            '--dry-run',
-            action='store_true',
-            dest='dry_run',
-            help="Don't send anything. Use --verbose to print the request.",
+            help=r"""
+                A description of a repository that is part of the app being
+                deployed, but isn't present on the server as a CSV checkout.
+
+                Attributes:
+
+                    name:<name>
+                    version:<version-string>
+                    vcs:<{vcs_types}>
+                    rev:<vcs-revision>
+                    branch:<vcs-branch>
+                    remote_url:<vcs-remote-url>
+
+                A repository has to have a name, and at least a version or rev.
+
+                Examples:
+
+                    --repo name:app version:1.0.0
+                    --repo name:app2 csv:git rev:383dba branch:prod \
+                           remote_url:git@github.com:opbeat/app2.git
+
+            """.format(vcs_types='|'.join(VCS_NAME_MAP.values())),
         )
 
         # Hidden aliases for --repository to preserve

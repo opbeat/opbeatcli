@@ -4,10 +4,9 @@ Models representing packages.
 """
 from __future__ import absolute_import
 import os
-import re
 
 from opbeatcli.exceptions import InvalidArgumentError
-from .vcs import VCSInfo, find_vcs_root, VCS_NAME_MAP
+from .vcs import VCSInfo, find_vcs_root
 
 
 PYTHON_PACKAGE = 'python'
@@ -55,7 +54,7 @@ class BasePackage(object):
 
     def __repr__(self):
         return (
-            '{cls}(path={path!r}, name={name!r}, version={version!r})'
+            '{cls}(name={name!r}, version={version!r})'
             .format(
                 cls=type(self).__name__,
                 **self.__dict__
@@ -77,22 +76,12 @@ class BaseRequirement(BasePackage):
 
 class Component(BasePackage):
     """
-    A code component of the app being deployed (--repo for the user).
+    A code component of the app being deployed.
+
+    (--repo / --local-repo for the user).
 
     """
     package_type = COMPONENT_PACKAGE
-
-    @classmethod
-    def from_local_repo_spec(cls, spec):
-
-        vcs_info = None
-        path = spec.pop('path')
-        path = os.path.abspath(os.path.expanduser(path))
-        name = spec.pop('name') or os.path.basename(path.rstrip(os.path.sep))
-        vcs_root = find_vcs_root(path)
-        if vcs_root:
-            vcs_info = VCSInfo.from_path(vcs_root)
-        return cls(vcs_info=vcs_info, name=name, **spec)
 
     @classmethod
     def from_repo_spec(cls, spec):
@@ -114,3 +103,21 @@ class Component(BasePackage):
             vcs_info = VCSInfo(**vcs)
 
         return cls(vcs_info=vcs_info, **spec)
+
+    @classmethod
+    def from_local_repo_spec(cls, spec):
+        path = os.path.abspath(os.path.expanduser(spec.pop('path')))
+        if not os.path.isdir(path):
+            raise InvalidArgumentError(
+                'Local repository path does not exist: %r' % path
+            )
+
+        vcs_root = find_vcs_root(path)
+        if not vcs_root:
+            raise InvalidArgumentError(
+                'No VCS root found for the local repository: %r' % path
+            )
+
+        vcs_info = VCSInfo.from_path(vcs_root)
+        name = spec.pop('name') or os.path.basename(path.rstrip(os.path.sep))
+        return cls(vcs_info=vcs_info, name=name, **spec)

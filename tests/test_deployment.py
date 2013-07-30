@@ -1,8 +1,11 @@
 import os
-
 from opbeatcli.exceptions import InvalidArgumentError
 from opbeatcli.deployment.packages import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
+from opbeatcli.commands.deployment import (
+    KeyValue, RepoSpecValidator,
+    get_repo_spec, get_local_repo_spec,
+)
 
 try:
     import unittest2 as unittest
@@ -10,68 +13,204 @@ except ImportError:
     import unittest
 
 
-class TestComponentFromSpec(unittest.TestCase):
+class TestRepoSpecArgParsingAndValidation(unittest.TestCase):
 
-    def assert_spec_parsed_into(self, spec, attributes):
-        component = Component.from_repo_spec(spec)
-        self.assertDictContainsSubset(component.__dict__, attributes)
-
-    def test_component_from_spec_with_path_only(self):
-        self.assert_spec_parsed_into(
-            {
-                'path': '/app'
-            },
-            {
-                'path': '/app',
-                'name': 'app',
-                'version': None,
-            }
-        )
-
-    def test_component_from_spec_with_path_name_and_version(self):
-        self.assert_spec_parsed_into(
-            {
-                'path': '/app',
-                'name': 'my-app',
-                'version': 'v1.0'
-            },
-            {
-                'path': '/app',
-                'name': 'my-app',
-                'version': 'v1.0',
-            }
-        )
-
-    def test_component_from_spec_with_path_and_version(self):
-        self.assert_spec_parsed_into(
-            {
-                '/app': 'v1.0'
-            }, {
-                'path': '/app',
-                'name': 'app',
-                'version': 'v1.0',
-            }
-        )
-
-    def test_component_from_spec_with_relative_path(self):
-        self.assert_spec_parsed_into('..', {
-            'path': os.path.abspath('..'),
-            'name': os.path.basename(os.path.abspath('..')),
-            'version': None,
-        })
-
-    def test_component_from_spec_invalid(self):
-        invalid_specs = [
+    def test_syntactically_invalid_key_value_pairs(self):
+        invalid = [
             '',
-            '/',   # Invalid because we cannot not infer name
-            ':aa',
-            '/foo:@aa',
-            '.:',
-            '/www:app@q123@',
+            ':',
+            'key:',
+            ':value',
+            'foo',
         ]
-        for spec in invalid_specs:
+        for arg in invalid:
             with self.assertRaises(InvalidArgumentError):
-                Component.from_repo_spec(spec)
+                KeyValue.from_string(arg)
+
+    def test_repo_spec_validation(self):
+        validate = RepoSpecValidator(key1=True, key2=True, key3=False)
+        invalid = [
+            'key1:foo key1:foo',  # duplicate
+            'key1:foo',           # missing
+            'undefined:foo',      # unknown
+        ]
+        for args in invalid:
+            pairs = map(KeyValue.from_string, args.split())
+            with self.assertRaises(InvalidArgumentError):
+                validate(pairs)
+
+
+class BaseComponentTestCase(unittest.TestCase):
+
+    get_component = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.PATH = os.path.dirname(__file__)
+        cls.DIR_NAME = os.path.basename(cls.PATH)
+
+        cls.PARENT_PATH = os.path.dirname(cls.PATH)
+        cls.PARENT_DIR_NAME = os.path.basename(cls.PARENT_PATH)
+
+        os.chdir(cls.PATH)
+
+    def assert_args_to_component(self, cli_args_dict, expected_attributes):
+        """
+        Check that repo CLI args get properly parsed and the component
+        created has all ``attributes``.
+
+        """
+        component = self.get_component(cli_args_dict)
+        vcs_info = expected_attributes.get('vcs_info', None)
+
+        if vcs_info:
+            self.assertIsNotNone(component.vcs_info)
+            self.assertDictContainsSubset(
+                vcs_info,
+                component.vcs_info.__dict__
+            )
+            del expected_attributes['vcs_info']
+
+        self.assertDictContainsSubset(
+            expected_attributes,
+            component.__dict__
+        )
+
+
+class TestComponentFromRepoSpec(BaseComponentTestCase):
+
+    def get_component(self, cli_args_dict):
+        """
+        :param cli_args_dict: key:value arguments to --repo as a ``dict``
+        :return: a ``Component``
+
+        """
+        spec = get_repo_spec(cli_args_dict.items())
+        component = Component.from_repo_spec(spec)
+        return component
+
+    def test_component_name_version_vcs_info(self):
+        self.assert_args_to_component(
+            {
+                'name': 'test',
+                'version': '1.0',
+                'vcs': 'git',
+                'rev': 'xxx',
+                'branch': 'master',
+                'remote_url': 'git@github.com:opbeat/opbeatcli.git',
+            },
+            {
+                'name': 'test',
+                'version': '1.0',
+                'vcs_info': {
+                    'vcs_type': 'git',
+                    'rev': 'xxx',
+                    'branch': 'master',
+                    'remote_url': 'git@github.com:opbeat/opbeatcli.git',
+                }
+            }
+        )
+
+    def test_component_name_version_no_rev(self):
+        self.assert_args_to_component(
+            {
+                'name': 'test',
+                'version': '1.0',
+            },
+            {
+                'name': 'test',
+                'version': '1.0',
+            }
+        )
+
+    def test_component_rev_no_version(self):
+        self.assert_args_to_component(
+            {
+                'name': 'test',
+                'vcs': 'git',
+                'rev': 'xxx',
+                'branch': 'master',
+                'remote_url': 'git@github.com:opbeat/opbeatcli.git',
+            },
+            {
+                'name': 'test',
+                'vcs_info': {
+                    'vcs_type': 'git',
+                    'rev': 'xxx',
+                    'branch': 'master',
+                    'remote_url': 'git@github.com:opbeat/opbeatcli.git',
+                }
+            }
+        )
+
+    def test_component_no_version_no_rev(self):
+        with self.assertRaises(InvalidArgumentError):
+            self.get_component({
+                'name': 'test',
+            })
+
+
+class TestComponentFromLocalRepoSpec(BaseComponentTestCase):
+
+    def get_component(self, cli_args_dict):
+        """
+        :param cli_args_dict: key:value arguments to --local-repo as a ``dict``
+        :return: a ``Component``
+
+        """
+        spec = get_local_repo_spec(cli_args_dict.items())
+        component = Component.from_local_repo_spec(spec)
+        return component
+
+    def test_local_component_path_does_not_exist(self):
+        with self.assertRaises(InvalidArgumentError):
+            self.get_component({
+                'path': os.path.join(self.PATH, 'xxx')
+            })
+
+    def test_local_component_path_exists_but_no_cvs(self):
+        with self.assertRaises(InvalidArgumentError):
+            self.get_component({
+                'path': '/',
+                'name': 'test'
+            })
+
+    def test_component_from_local_spec_with_relative_path(self):
+        self.assert_args_to_component(
+            {
+                'path': '.'
+            },
+            {
+                'name': self.DIR_NAME,
+                'vcs_info': {
+                    'vcs_type': 'git'
+                }
+            }
+        )
+
+    def test_component_from_local_spec_with_relative_path2(self):
+        self.assert_args_to_component(
+            {
+                'path': '..'
+            },
+            {
+                'name': self.PARENT_DIR_NAME,
+                'vcs_info': {
+                    'vcs_type': 'git'
+                }
+            }
+        )
+
+    def test_component_from_local_spec_with_absolute_path(self):
+        self.assert_args_to_component(
+            {
+                'path': self.PATH
+            },
+            {
+                'name': self.DIR_NAME,
+                'vcs_info': {'vcs_type': 'git'}
+            }
+        )
 
 
 class TestSSHAliasExpansion(unittest.TestCase):
