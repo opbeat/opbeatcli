@@ -1,11 +1,12 @@
 from opbeatcli.client import OpbeatClient
+from opbeatcli.log import root_logger
 
 
 class CommandBase(object):
 
     description = None
 
-    def __init__(self, parser, args, logger):
+    def __init__(self, parser, args, logger=root_logger):
         """
         :type parser: argparse.ArgumentParser
         :type args: argparse.Namespace

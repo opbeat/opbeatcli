@@ -15,11 +15,14 @@ from opbeatcli.commands import COMMANDS
 
 
 class OpbeatHelpFormatter(argparse.RawDescriptionHelpFormatter):
-    """
-    A formatter that does not format our help strings.
+    """A nicer help formatter.
+
+    Help for arguments can be indented and contain new lines.
+    It will be de-dented and arguments in the help
+    will be separated by a blank line for better readability.
+
 
     """
-
     def __init__(self, max_help_position=8, *args, **kwargs):
         # A smaller indent for args help.
         kwargs['max_help_position'] = max_help_position

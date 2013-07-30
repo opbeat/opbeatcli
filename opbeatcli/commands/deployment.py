@@ -84,7 +84,7 @@ class RepoSpecValidator(object):
         return spec
 
 
-get_repo_spec = RepoSpecValidator(
+args_to_repo_spec = RepoSpecValidator(
     name=True,
     vcs=False,
     remote_url=False,
@@ -93,7 +93,7 @@ get_repo_spec = RepoSpecValidator(
     rev=False,
     version=False
 )
-get_local_repo_spec = RepoSpecValidator(
+args_to_local_repo_spec = RepoSpecValidator(
     path=True,
     name=False,
     version=False
@@ -107,11 +107,25 @@ class DeploymentCommand(CommandBase):
 
     def run(self):
 
-        local_repo_specs = self.args.local_repo_specs or []
+        repo_specs, local_repo_specs = self.get_repo_specs()
+
+        try:
+            data = get_deployment_data(
+                local_hostname=self.args.hostname,
+                repo_specs=repo_specs,
+                local_repo_specs=local_repo_specs,
+            )
+        except InvalidArgumentError as e:
+            self.parser.error(e.message)
+        else:
+            self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
+
+    def get_repo_specs(self):
         repo_specs = self.args.repo_specs or []
+        local_repo_specs = self.args.local_repo_specs or []
 
         if self.args.legacy_directory or self.args.legacy_module:
-            if self.args.local_repo_specs:
+            if local_repo_specs or repo_specs:
                 self.parser.error(
                     '--directory, -d and --module, -m'
                     ' cannot be used together with --repo.'
@@ -136,22 +150,11 @@ class DeploymentCommand(CommandBase):
                 [KeyValue('path', os.getcwd())]
             )
 
-        try:
-            data = get_deployment_data(
-                local_hostname=self.args.hostname,
-                local_repo_specs=map(
-                    get_local_repo_spec,
-                    local_repo_specs
-                ),
-                repo_specs=map(
-                    get_repo_spec,
-                    repo_specs or []
-                ),
-            )
-        except InvalidArgumentError as e:
-            self.parser.error(e.message)
-        else:
-            self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
+        return (
+            [args_to_repo_spec(spec) for spec in repo_specs],
+            [args_to_local_repo_spec(spec) for spec in local_repo_specs],
+        )
+
 
     @classmethod
     def add_command_args(cls, subparser):
