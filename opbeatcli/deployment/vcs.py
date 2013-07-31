@@ -60,14 +60,6 @@ class VCSInfo(object):
             )
         )
 
-    def to_json(self):
-        return {
-            'type': self.vcs_type,
-            'revision': self.rev,
-            'repository': self.remote_url,
-            # 'branch': self.branch,
-        }
-
     @classmethod
     def from_path(cls, path):
         backend_class = vcs.get_backend_from_location(path)

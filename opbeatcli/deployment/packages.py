@@ -18,8 +18,8 @@ COMPONENT_PACKAGE = 'repository'
 PACKAGE_TYPES = set([
     COMPONENT_PACKAGE,
     PYTHON_PACKAGE,
-    # RUBY_PACKAGE,
-    # NODE_PACKAGE,
+    NODE_PACKAGE,
+    RUBY_PACKAGE,
 ])
 
 
@@ -39,19 +39,6 @@ class BasePackage(object):
         self.version = version
         self.vcs_info = vcs_info
 
-    def to_json(self):
-        data = {
-            'module': {
-                'name': self.name,
-                'module_type': self.package_type,
-            },
-            'version': self.version
-        }
-        if self.vcs_info:
-            data['vcs'] = self.vcs_info.to_json()
-
-        return data
-
     def __repr__(self):
         return (
             '{cls}(name={name!r}, version={version!r})'
@@ -62,7 +49,7 @@ class BasePackage(object):
         )
 
 
-class BaseRequirement(BasePackage):
+class BaseDependency(BasePackage):
     """
     A piece of software installed along side and needed by the app, but not
     a component of the app.

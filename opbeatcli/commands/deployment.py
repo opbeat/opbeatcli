@@ -3,7 +3,7 @@ import argparse
 from collections import namedtuple, defaultdict
 
 from opbeatcli import settings
-from opbeatcli.deployment import get_deployment_data
+from opbeatcli.deployment import get_deployment_data, DEPENDENCY_COLLECTORS
 from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.exceptions import InvalidArgumentError
 from .base import CommandBase
@@ -108,12 +108,15 @@ class DeploymentCommand(CommandBase):
     def run(self):
 
         repo_specs, local_repo_specs = self.get_repo_specs()
+        local_hostname = self.args.hostname
+        collect_dependency_types = self.args.collect_dependency_types
 
         try:
             data = get_deployment_data(
-                local_hostname=self.args.hostname,
+                local_hostname=local_hostname,
                 repo_specs=repo_specs,
                 local_repo_specs=local_repo_specs,
+                collect_dependency_types=collect_dependency_types,
             )
         except InvalidArgumentError as e:
             self.parser.error(e.message)
@@ -182,17 +185,19 @@ OPBEAT_HOSTNAME
             '--local-repo',
             action='append',
             dest='local_repo_specs',
-            nargs=argparse.ZERO_OR_MORE,
-            metavar='LOCAL_REPO_SPEC',
+            nargs=argparse.ONE_OR_MORE,
+            metavar='attribute:value',
             type=KeyValue.from_string,
             help="""
                 A local VCS repository that is part of the app being deployed.
+                Multiple local repositories can be specified by using the
+                --local-repo option multiple times.
 
                 Attributes:
 
-                    path:<local-path>
-                    name:<custom-name>
-                    version:<version-string>
+                    path:<local-path>         (required)
+                    name:<custom-name>        (optional)
+                    version:<version-string>  (optional)
 
                 Only path is required. If name isn't specified, the directory
                 name included in path will be used instead. Examples:
@@ -205,19 +210,24 @@ OPBEAT_HOSTNAME
         )
         subparser.add_argument(
             '--repo',
-            nargs=argparse.ZERO_OR_MORE,
+            nargs=argparse.ONE_OR_MORE,
             dest='repo_specs',
-            metavar='REPO_SPEC',
+            metavar='attribute:value',
             action='append',
             type=KeyValue.from_string,
             help=r"""
                 A description of a repository that is part of the app being
                 deployed, but isn't present on the server as a CSV checkout.
+                Multiple repositories can be specified by using the --repo
+                option multiple times.
 
                 Attributes:
 
-                    name:<name>
-                    version:<version-string>
+                    name:<name>                (required)
+                    version:<version-string>   (optional if VCS info specified)
+
+                VCS info attributes:
+
                     vcs:<{vcs_types}>
                     rev:<vcs-revision>
                     branch:<vcs-branch>
@@ -230,6 +240,44 @@ OPBEAT_HOSTNAME
                     --repo name:app version:1.0.0
                     --repo name:app2 csv:git rev:383dba branch:prod \
                            remote_url:git@github.com:opbeat/app2.git
+
+            """.format(vcs_types='|'.join(VCS_NAME_MAP.values())),
+        )
+        subparser.add_argument(
+            '--collect-dependencies',
+            nargs=argparse.ONE_OR_MORE,
+            dest='collect_dependency_types',
+            default=DEPENDENCY_COLLECTORS.keys()
+        )
+        subparser.add_argument(
+            '--dependency',
+            nargs=argparse.ONE_OR_MORE,
+            dest='dependencies_specs',
+            metavar='attribute:value',
+            action='append',
+            type=KeyValue.from_string,
+            help=r"""
+                A description of a dependency that the app being deployed
+                depends on. Multiple dependencies can be specified by using
+                the --dependency option multiple times.
+
+                Attributes:
+
+                    name:<name>
+                    type:<python|nodejs|ruby|other>
+                    version:<version-string>
+                    vcs:<{vcs_types}>
+                    rev:<vcs-revision>
+                    branch:<vcs-branch>
+                    remote_url:<vcs-remote-url>
+
+                A repository has to have a name, and at least a version or rev.
+
+                Examples:
+
+                    --dependency type:python name:django version:1.5.0
+                    --dependency name:app2 csv:git rev:383dba branch:prod \
+                                  remote_url:git@github.com:opbeat/app2.git
 
             """.format(vcs_types='|'.join(VCS_NAME_MAP.values())),
         )

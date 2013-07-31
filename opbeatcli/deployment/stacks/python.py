@@ -4,17 +4,17 @@ Python requirements and their discovery.
 """
 from pip.util import get_installed_distributions
 
-from ..packages import BaseRequirement, PYTHON_PACKAGE
+from ..packages import BaseDependency, PYTHON_PACKAGE
 from ..vcs import VCSInfo
 
 
-def get_installed_requirements():
+def collect_dependencies():
     """Installed Python requirements according to `pip'"""
     for distribution in get_installed_distributions():
-        yield PythonRequirement.from_distribution(distribution)
+        yield PythonDependency.from_distribution(distribution)
 
 
-class PythonRequirement(BaseRequirement):
+class PythonDependency(BaseDependency):
 
     package_type = PYTHON_PACKAGE
 
