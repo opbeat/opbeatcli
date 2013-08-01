@@ -5,7 +5,7 @@ Invoke as `opbeat` or `python -m opbeatcli`.
 import sys
 import logging
 
-from opbeatcli.log import root_logger
+from opbeatcli.log import logger
 from opbeatcli.cli import parser
 from opbeatcli.exceptions import OpbeatError, ClientConnectionError
 
@@ -23,10 +23,10 @@ def main():
 
     args = parser.parse_args()
 
-    root_logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
     Command = args.command_class
-    command = Command(parser=parser, args=args, logger=root_logger)
+    command = Command(parser=parser, args=args)
 
     try:
         command.run()
@@ -38,10 +38,10 @@ def main():
         else:
             return EXIT_SERVER_ERROR
     except OpbeatError as e:
-        root_logger.error(e.message)
+        logger.error(e.message)
         return EXIT_ERROR
     except Exception:
-        root_logger.exception('Error executing command')
+        logger.exception('Error executing command')
         return EXIT_ERROR
     else:
         return EXIT_SUCCESS

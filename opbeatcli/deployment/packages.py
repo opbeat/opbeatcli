@@ -12,6 +12,7 @@ from .vcs import VCSInfo, find_vcs_root
 PYTHON_PACKAGE = 'python'
 RUBY_PACKAGE = 'ruby'
 NODE_PACKAGE = 'nodejs'
+DEB_PACKAGE = 'deb'
 COMPONENT_PACKAGE = 'repository'
 
 
@@ -20,6 +21,7 @@ PACKAGE_TYPES = set([
     PYTHON_PACKAGE,
     NODE_PACKAGE,
     RUBY_PACKAGE,
+    DEB_PACKAGE,
 ])
 
 

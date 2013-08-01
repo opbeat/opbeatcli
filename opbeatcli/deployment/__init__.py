@@ -1,39 +1,51 @@
 from itertools import chain
+
 from opbeatcli.deployment import serialize
-
-from .packages import Component, PYTHON_PACKAGE, NODE_PACKAGE, RUBY_PACKAGE
-from .stacks import python, nodejs, ruby
-
-
-DEPENDENCY_COLLECTORS = {
-    PYTHON_PACKAGE: python.collect_dependencies,
-    NODE_PACKAGE: nodejs.collect_dependencies,
-    RUBY_PACKAGE: ruby.collect_dependencies,
-}
+from opbeatcli.exceptions import InvalidArgumentError, CommandNotFoundError
+from .packages import Component
+from .stacks import DEPENDENCY_COLLECTORS
 
 
-def get_deployment_data(
-        local_hostname,
-        repo_specs,
-        local_repo_specs,
-        collect_dependency_types):
-    """"""
+def get_deployment_data(local_hostname, repo_specs, local_repo_specs,
+                        collect_dep_types, collect_dep_types_specified):
+    """Return actual deployment data to be POSTed to the API"""
     return serialize.deployment(
         local_hostname=local_hostname,
         packages=chain(
-            collect_dependencies(collect_dependency_types),
-            get_components(repo_specs, local_repo_specs)
+            _collect_dependencies(
+                collect_dep_types, collect_dep_types_specified),
+            _get_components(repo_specs, local_repo_specs)
         ),
     )
 
 
-def collect_dependencies(for_types):
+def _collect_dependencies(for_types, types_specified):
     for dep_type in for_types:
-        for dependency in DEPENDENCY_COLLECTORS[dep_type]():
-            yield dependency
+
+        if ':' not in dep_type:
+            custom_command = None
+        else:
+            dep_type, custom_command = dep_type.split(':', 1)
+
+        if dep_type not in DEPENDENCY_COLLECTORS:
+            raise InvalidArgumentError(
+                'Unknown dependency type: %r' % dep_type
+            )
+
+        collector_class = DEPENDENCY_COLLECTORS[dep_type]
+        collector = collector_class(custom_command=custom_command)
+
+        try:
+            for dep in collector.collect():
+                yield dep
+        except CommandNotFoundError:
+            if types_specified:
+                # We can ignore this error unless the user explicitely asked
+                # for this type (and also possibly supplied a custom command).
+                raise
 
 
-def get_components(repo_specs, local_repo_specs):
+def _get_components(repo_specs, local_repo_specs):
 
     for repo_spec in repo_specs:
         yield Component.from_repo_spec(repo_spec)

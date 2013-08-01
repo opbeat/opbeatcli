@@ -1,4 +1,4 @@
 import logging
 
-root_logger = logging.getLogger('opbeatcli.errors')
-root_logger.addHandler(logging.StreamHandler())
+logger = logging.getLogger('opbeatcli.errors')
+logger.addHandler(logging.StreamHandler())

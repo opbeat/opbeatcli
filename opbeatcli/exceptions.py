@@ -23,3 +23,11 @@ class ClientConnectionError(OpbeatError):
 
 class ClientHTTPError(ClientConnectionError):
     """Raised when response status >= 400."""
+
+
+class CommandError(OpbeatError):
+    pass
+
+
+class CommandNotFoundError(CommandError):
+    """Dependency collector command not found."""

@@ -1,9 +1,12 @@
 import os
+#noinspection PyCompatibility
 import argparse
 from collections import namedtuple, defaultdict
 
 from opbeatcli import settings
-from opbeatcli.deployment import get_deployment_data, DEPENDENCY_COLLECTORS
+from opbeatcli.log import logger
+from opbeatcli.deployment import get_deployment_data
+from opbeatcli.deployment.stacks import DEPENDENCY_COLLECTORS
 from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.exceptions import InvalidArgumentError
 from .base import CommandBase
@@ -109,14 +112,21 @@ class DeploymentCommand(CommandBase):
 
         repo_specs, local_repo_specs = self.get_repo_specs()
         local_hostname = self.args.hostname
-        collect_dependency_types = self.args.collect_dependency_types
+
+        if not self.args.collect_dependency_types:
+            collect_dep_types_specified = False
+            collect_dep_types = DEPENDENCY_COLLECTORS.keys()
+        else:
+            collect_dep_types_specified = True
+            collect_dep_types = self.args.collect_dependency_types
 
         try:
             data = get_deployment_data(
                 local_hostname=local_hostname,
                 repo_specs=repo_specs,
                 local_repo_specs=local_repo_specs,
-                collect_dependency_types=collect_dependency_types,
+                collect_dep_types=collect_dep_types,
+                collect_dep_types_specified=collect_dep_types_specified,
             )
         except InvalidArgumentError as e:
             self.parser.error(e.message)
@@ -134,7 +144,7 @@ class DeploymentCommand(CommandBase):
                     ' cannot be used together with --repo.'
                 )
 
-            self.logger.warning(
+            logger.warning(
                 'Warning: --directory, -d and --module, -m are deprecated and'
                 ' will be removed in a future version of opbeatcli.'
                 '\nPlease use --repo instead. See ` opbeat deployment --help\''
@@ -245,10 +255,53 @@ OPBEAT_HOSTNAME
         )
         subparser.add_argument(
             '--collect-dependencies',
-            nargs=argparse.ONE_OR_MORE,
+            nargs=argparse.ZERO_OR_MORE,
+            metavar='TYPE',
             dest='collect_dependency_types',
-            default=DEPENDENCY_COLLECTORS.keys()
-        )
+            help=r"""
+            Enable automatic collection of installed dependencies.
+            With no arguments, all the predefined dependency types will be
+            collected. You can also choose to collect only some types of
+            dependencies.
+
+            The available types are:
+
+                {types}
+
+            Examples:
+
+                --collect-dependencies
+                --collect-dependencies python ruby
+
+            For each type, there is a default shell command which is run to
+            collect the dependencies:
+
+{commands}
+
+            You can also supply a custom command for each type as long as its
+            output uses the same format as the output of the default one does:
+
+                --collect-dependencies python:'/my-virtualenv/bin/pip freeze'
+
+                --collect-dependencies \
+                    python:'pip freeze && /my-virtualenv/bin/pip freeze'
+
+                --collect-dependencies \
+                    python \
+                    ruby:'bin/custom-script' \
+                    nodejs:'cd /www/webapp && npm --json list'
+
+
+            """.format(
+                types=' '.join(DEPENDENCY_COLLECTORS.keys()),
+                commands=''.join(
+                    "{: >23}: {}\n".format(
+                        dep_type, collector.default_command
+                    )
+                    for dep_type, collector in DEPENDENCY_COLLECTORS.items()
+                )
+            )
+        ),
         subparser.add_argument(
             '--dependency',
             nargs=argparse.ONE_OR_MORE,

@@ -1,12 +1,12 @@
 from opbeatcli.client import OpbeatClient
-from opbeatcli.log import root_logger
+from opbeatcli.log import logger
 
 
 class CommandBase(object):
 
     description = None
 
-    def __init__(self, parser, args, logger=root_logger):
+    def __init__(self, parser, args):
         """
         :type parser: argparse.ArgumentParser
         :type args: argparse.Namespace
@@ -15,7 +15,6 @@ class CommandBase(object):
         """
         self.parser = parser
         self.args = args
-        self.logger = logger
 
     def run(self):
         """Do the actual work."""
@@ -30,7 +29,6 @@ class CommandBase(object):
                 server=self.args.server,
                 secret_token=self.args.secret_token,
                 dry_run=self.args.dry_run,
-                logger=self.logger,
                 timeout=self.args.timeout,
             )
         return self._client
