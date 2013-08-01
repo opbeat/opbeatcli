@@ -35,13 +35,16 @@ class OpbeatHelpFormatter(argparse.RawDescriptionHelpFormatter):
 
 parser = argparse.ArgumentParser(
     description='Interact with Opbeat',
-    version=__version__,
     formatter_class=OpbeatHelpFormatter
 )
 
 
 ### Common options
-
+parser.add_argument(
+    '--version',
+    action='version',
+    version=__version__
+)
 parser.add_argument(
     '--verbose',
     help='Increase output verbosity',

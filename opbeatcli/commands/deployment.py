@@ -87,14 +87,14 @@ class RepoSpecValidator(object):
         return spec
 
 
-args_to_repo_spec = RepoSpecValidator(
-    name=True,
-    vcs=False,
-    remote_url=False,
-    branch=False,
-    # One of these two is required.
-    rev=False,
-    version=False
+PACKAGE_SCHEMA = {'name': True, 'vcs': False, 'remote_url': False,
+                  'branch': False, 'rev': False, 'version': False}
+
+
+args_to_repo_spec = RepoSpecValidator(**PACKAGE_SCHEMA)
+args_to_dependency_spec = RepoSpecValidator(
+    type=True,
+    **PACKAGE_SCHEMA
 )
 args_to_local_repo_spec = RepoSpecValidator(
     path=True,
@@ -110,7 +110,7 @@ class DeploymentCommand(CommandBase):
 
     def run(self):
 
-        repo_specs, local_repo_specs = self.get_repo_specs()
+        repo_specs, dependency_specs, local_repo_specs = self.get_specs()
         local_hostname = self.args.hostname
 
         if not self.args.collect_dependency_types:
@@ -124,6 +124,7 @@ class DeploymentCommand(CommandBase):
             data = get_deployment_data(
                 local_hostname=local_hostname,
                 repo_specs=repo_specs,
+                dependency_specs=dependency_specs,
                 local_repo_specs=local_repo_specs,
                 collect_dep_types=collect_dep_types,
                 collect_dep_types_specified=collect_dep_types_specified,
@@ -133,8 +134,9 @@ class DeploymentCommand(CommandBase):
         else:
             self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
 
-    def get_repo_specs(self):
+    def get_specs(self):
         repo_specs = self.args.repo_specs or []
+        dependency_specs = self.args.dependency_specs or []
         local_repo_specs = self.args.local_repo_specs or []
 
         if self.args.legacy_directory or self.args.legacy_module:
@@ -165,6 +167,7 @@ class DeploymentCommand(CommandBase):
 
         return (
             [args_to_repo_spec(spec) for spec in repo_specs],
+            [args_to_dependency_spec(spec) for spec in dependency_specs],
             [args_to_local_repo_spec(spec) for spec in local_repo_specs],
         )
 
@@ -251,7 +254,8 @@ OPBEAT_HOSTNAME
                     --repo name:app2 csv:git rev:383dba branch:prod \
                            remote_url:git@github.com:opbeat/app2.git
 
-            """.format(vcs_types='|'.join(VCS_NAME_MAP.values())),
+            """
+            .format(vcs_types='|'.join(sorted(VCS_NAME_MAP.values()))),
         )
         subparser.add_argument(
             '--collect-dependencies',
@@ -292,20 +296,21 @@ OPBEAT_HOSTNAME
                     nodejs:'cd /www/webapp && npm --json list'
 
 
-            """.format(
-                types=' '.join(DEPENDENCY_COLLECTORS.keys()),
-                commands=''.join(
-                    "{: >23}: {}\n".format(
+            """
+            .format(
+                types=' '.join(sorted(DEPENDENCY_COLLECTORS.keys())),
+                commands=''.join(sorted(
+                    "{0: >23}: {1}\n".format(
                         dep_type, collector.default_command
-                    )
+                    ).replace('%', '%%')
                     for dep_type, collector in DEPENDENCY_COLLECTORS.items()
-                )
+                ))
             )
         ),
         subparser.add_argument(
             '--dependency',
             nargs=argparse.ONE_OR_MORE,
-            dest='dependencies_specs',
+            dest='dependency_specs',
             metavar='attribute:value',
             action='append',
             type=KeyValue.from_string,
@@ -332,7 +337,8 @@ OPBEAT_HOSTNAME
                     --dependency name:app2 csv:git rev:383dba branch:prod \
                                   remote_url:git@github.com:opbeat/app2.git
 
-            """.format(vcs_types='|'.join(VCS_NAME_MAP.values())),
+            """
+            .format(vcs_types='|'.join(sorted(VCS_NAME_MAP.values()))),
         )
 
         # Hidden aliases for --repository to preserve

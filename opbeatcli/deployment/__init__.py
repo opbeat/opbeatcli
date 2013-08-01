@@ -6,14 +6,22 @@ from .packages import Component
 from .stacks import DEPENDENCY_COLLECTORS
 
 
-def get_deployment_data(local_hostname, repo_specs, local_repo_specs,
-                        collect_dep_types, collect_dep_types_specified):
+def get_deployment_data(
+        local_hostname,
+        repo_specs,
+        local_repo_specs,
+        dependency_specs,
+        collect_dep_types,
+        collect_dep_types_specified
+    ):
     """Return actual deployment data to be POSTed to the API"""
     return serialize.deployment(
         local_hostname=local_hostname,
         packages=chain(
             _collect_dependencies(
-                collect_dep_types, collect_dep_types_specified),
+                collect_dep_types,
+                collect_dep_types_specified,
+            ),
             _get_components(repo_specs, local_repo_specs)
         ),
     )

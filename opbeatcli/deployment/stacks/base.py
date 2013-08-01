@@ -19,7 +19,7 @@ class DependencyCollector(object):
     def run_command(self):
         command = self.custom_command or self.default_command
         process = Popen(command, shell=True, stdout=PIPE)
-        our, err = process.communicate()
+        out, err = process.communicate()
         ret = process.poll()
 
         if ret:
@@ -27,7 +27,7 @@ class DependencyCollector(object):
                 raise CommandNotFoundError()
             raise CommandError()
 
-        return our.decode(sys.stdout.encoding)
+        return out.decode(sys.stdout.encoding)
 
     def parse(self, output):
         """Parse command ``output`` nad return a ``list`` of dependencies."""

@@ -92,7 +92,7 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
     def test_deployment_no_repos_specified(self):
         """The current directory should be added as a local repo."""
         command = self.get_command()
-        repo_specs, local_repo_specs = command.get_repo_specs()
+        repo_specs, local_repo_specs = command.get_specs()
         self.assertFalse(repo_specs)
         self.assertEqual(len(local_repo_specs), 1)
         self.assertDictEqual(
@@ -106,7 +106,7 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
 
     def test_deployment_legacy_directory(self):
         command = self.get_command('-d .')
-        repo_specs, local_repo_specs = command.get_repo_specs()
+        repo_specs, local_repo_specs = command.get_specs()
         self.assertFalse(repo_specs)
         self.assertEqual(len(local_repo_specs), 1)
         self.assertDictEqual(
@@ -120,7 +120,7 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
 
     def test_deployment_legacy_module(self):
         command = self.get_command('-m my-repo-name')
-        repo_specs, local_repo_specs = command.get_repo_specs()
+        repo_specs, local_repo_specs = command.get_specs()
         self.assertFalse(repo_specs)
         self.assertEqual(len(local_repo_specs), 1)
         self.assertDictEqual(
@@ -134,7 +134,7 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
 
     def test_deployment_legacy_directory_and_module(self):
         command = self.get_command('-m my-repo-name -d .')
-        repo_specs, local_repo_specs = command.get_repo_specs()
+        repo_specs, local_repo_specs = command.get_specs()
         self.assertFalse(repo_specs)
         self.assertEqual(len(local_repo_specs), 1)
         self.assertDictEqual(

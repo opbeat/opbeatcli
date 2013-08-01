@@ -1,11 +1,11 @@
-# coding:utf8
 from ..packages import BaseDependency, DEB_PACKAGE
 from .base import DependencyCollector
 
 
 class DebCollector(DependencyCollector):
 
-    default_command = r"dpkg-query -W -f '${package} ${version}\n'"
+    default_command = \
+        r"dpkg-query --show --showformat='${package} ${version}\n'"
 
     def parse(self, output):
         for line in output.splitlines():

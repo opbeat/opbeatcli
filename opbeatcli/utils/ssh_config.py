@@ -117,7 +117,7 @@ class SSHConfig (object):
         matches.append(_star)
         ret = {}
         for m in matches:
-            for k,v in m.iteritems():
+            for k,v in m.items():
                 if not k in ret:
                     ret[k] = v
         ret = self._expand_variables(ret, hostname)

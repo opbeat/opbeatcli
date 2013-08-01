@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import os
 
 from opbeatcli.exceptions import InvalidArgumentError
+#from .stacks import DEPENDENCIES_BY_TYPE
 from .vcs import VCSInfo, find_vcs_root
 
 
@@ -13,7 +14,8 @@ PYTHON_PACKAGE = 'python'
 RUBY_PACKAGE = 'ruby'
 NODE_PACKAGE = 'nodejs'
 DEB_PACKAGE = 'deb'
-COMPONENT_PACKAGE = 'repository'
+RPM_PACKAGE = 'rpm'
+COMPONENT_PACKAGE = 'component'
 
 
 PACKAGE_TYPES = set([
@@ -49,6 +51,28 @@ class BasePackage(object):
                 **self.__dict__
             )
         )
+
+
+    @classmethod
+    def from_spec(cls, spec):
+        vcs = {
+            'vcs_type': spec.pop('vcs'),
+            'branch': spec.pop('branch'),
+            'rev': spec.pop('rev'),
+            'remote_url': spec.pop('remote_url'),
+        }
+
+        vcs_info = None
+        if not spec['version'] and not (vcs['vcs_type'] and vcs['rev']):
+            raise InvalidArgumentError(
+                '--repo has to have at least either "version",'
+                ' or both "vcs" and "rev"'
+            )
+
+        if any(vcs.values()):
+            vcs_info = VCSInfo(**vcs)
+
+        return cls(vcs_info=vcs_info, **spec)
 
 
 class BaseDependency(BasePackage):
