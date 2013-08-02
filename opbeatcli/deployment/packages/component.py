@@ -19,7 +19,8 @@ class Component(BasePackage):
 
     @classmethod
     def spec_to_kwargs(cls, spec):
-        # Components have a path which can be used to fill in name  and VCS.
+        # Component specs have a path which can be used to fill in name
+        # and VCS attributes.
 
         kwargs = super(Component, cls).spec_to_kwargs(spec)
 

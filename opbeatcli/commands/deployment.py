@@ -176,8 +176,8 @@ class DeploymentCommand(CommandBase):
                 spec.append(KeyValue('name', self.args.legacy_module))
             component_specs.append(spec)
 
-        return [args_to_component_spec(spec) for spec in component_specs ],\
-               [args_to_dependency_spec(spec) for spec in dependency_specs],
+        return map(args_to_component_spec, component_specs),\
+               map(args_to_dependency_spec, dependency_specs),
 
 
     @classmethod
@@ -244,7 +244,7 @@ OPBEAT_HOSTNAME
                         path:tools/scheduler \
                         name:scheduler \
                         version:1.0.0-beta2
-                        csv:git \
+                        vcs:git \
                         rev:383dba \
                         branch:dev \
                         remote_url:git@github.com:opbeat/scheduler.git
@@ -265,8 +265,9 @@ OPBEAT_HOSTNAME
                 deployed depends on. Multiple dependencies can be specified
                 by using this option multiple times.
 
-                Attributes are the same as with --component. In addition
-                to that, the dependency type has to be specified as well:
+                Attributes are the same as with --component. There is no path,
+                however. In addition to the common attributes, the type
+                of the dependency has to be specified as well:
 
                     type:<{dependency_types}>
 
@@ -276,7 +277,7 @@ OPBEAT_HOSTNAME
 
                     --dependency type:other name:nginx version:1.5.3
                     --dependency type:python name:django version:1.5.0
-                    --dependency type:ruby name:app2 csv:git \
+                    --dependency type:ruby name:app2 vcs:git \
                                     rev:383dba branch:prod \
                                     remote_url:git@github.com:opbeat/app2.git
 
