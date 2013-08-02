@@ -4,7 +4,7 @@ Serialization of objects to the data format required by the API.
 This implementation is for version 1 of the API.
 
 """
-from .packages import COMPONENT_PACKAGE
+from .packages.component import Component
 
 
 LEGACY_COMPONENT_PACKAGE = 'repository'
@@ -28,15 +28,15 @@ def package(pkg):
         },
         'version': pkg.version
     }
-    if pkg.vcs_info:
+    if isinstance(pkg, Component):
+        data['path'] = pkg.path
+        data['module']['module_type'] = LEGACY_COMPONENT_PACKAGE
+
+    if pkg.vcs:
         data['vcs'] = {
-            'type': (
-                LEGACY_COMPONENT_PACKAGE
-                if pkg.vcs_info.vcs_type == COMPONENT_PACKAGE
-                else pkg.vcs_info.vcs_type
-            ),
-            'revision': pkg.vcs_info.rev,
-            'repository': pkg.vcs_info.remote_url,
-            # 'branch': self.branch,
+            'type': pkg.vcs.vcs_type,
+            'revision': pkg.vcs.rev,
+            'repository': pkg.vcs.remote_url,
+            'branch': pkg.vcs.branch,
         }
     return data

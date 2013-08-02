@@ -10,7 +10,6 @@ class CommandBase(object):
         """
         :type parser: argparse.ArgumentParser
         :type args: argparse.Namespace
-        :type logger: logging.Logger
 
         """
         self.parser = parser
@@ -23,6 +22,7 @@ class CommandBase(object):
     def client(self):
         """Return a client configured based on global args."""
         if not hasattr(self, '_client'):
+            #noinspection PyAttributeOutsideInit
             self._client = OpbeatClient(
                 organization_id=self.args.organization_id,
                 app_id=self.args.app_id,
@@ -37,6 +37,8 @@ class CommandBase(object):
     def add_command_args(cls, subparser):
         """
         Initiate ``parser`` with args specific to this command.
+
+        No-op by default.
 
         :param subparser: sub-parser for this command
         :type subparser: argparse.ArgumentParser

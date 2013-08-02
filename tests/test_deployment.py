@@ -1,11 +1,11 @@
 import os
 from opbeatcli.exceptions import InvalidArgumentError
-from opbeatcli.deployment.packages import Component
+from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
 from opbeatcli import cli
 from opbeatcli.commands.deployment import (
-    KeyValue, RepoSpecValidator,
-    args_to_repo_spec, args_to_local_repo_spec,
+    KeyValue, PackageSpecValidator,
+    args_to_component_spec, args_to_local_component_spec,
     DeploymentCommand
 )
 
@@ -30,7 +30,7 @@ class TestRepoSpecArgParsingAndValidation(unittest.TestCase):
                 KeyValue.from_string(arg)
 
     def test_repo_spec_validation(self):
-        validate = RepoSpecValidator(key1=True, key2=True, key3=False)
+        validate = PackageSpecValidator(key1=True, key2=True, key3=False)
         invalid = [
             'key1:foo key1:foo',  # duplicate
             'key1:foo',           # missing
@@ -65,15 +65,15 @@ class BaseComponentTestCase(BaseDeploymentTestCase):
 
         """
         component = self.get_component(cli_args_dict)
-        vcs_info = expected_attributes.get('vcs_info', None)
+        vcs = expected_attributes.get('vcs', None)
 
-        if vcs_info:
-            self.assertIsNotNone(component.vcs_info)
+        if vcs:
+            self.assertIsNotNone(component.vcs)
             self.assertDictContainsSubset(
-                vcs_info,
-                component.vcs_info.__dict__
+                vcs,
+                component.vcs.__dict__
             )
-            del expected_attributes['vcs_info']
+            del expected_attributes['vcs']
 
         self.assertDictContainsSubset(
             expected_attributes,
@@ -89,28 +89,14 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
         self.assertEqual(args.command_class, DeploymentCommand)
         return DeploymentCommand(parser=cli.parser, args=args)
 
-    def test_deployment_no_repos_specified(self):
-        """The current directory should be added as a local repo."""
-        command = self.get_command()
-        repo_specs, local_repo_specs = command.get_specs()
-        self.assertFalse(repo_specs)
-        self.assertEqual(len(local_repo_specs), 1)
-        self.assertDictEqual(
-            local_repo_specs[0],
-            {
-                'path': self.PATH,
-                'version': None,
-                'name': None
-            }
-        )
-
     def test_deployment_legacy_directory(self):
         command = self.get_command('-d .')
-        repo_specs, local_repo_specs = command.get_specs()
-        self.assertFalse(repo_specs)
-        self.assertEqual(len(local_repo_specs), 1)
+        specs = command.get_package_specs()
+        self.assertFalse(specs['components'])
+        self.assertFalse(specs['dependencies'])
+        self.assertEqual(len(specs['local_components']), 1)
         self.assertDictEqual(
-            local_repo_specs[0],
+            specs['local_components'][0],
             {
                 'path': '.',
                 'version': None,
@@ -118,27 +104,13 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
             }
         )
 
-    def test_deployment_legacy_module(self):
-        command = self.get_command('-m my-repo-name')
-        repo_specs, local_repo_specs = command.get_specs()
-        self.assertFalse(repo_specs)
-        self.assertEqual(len(local_repo_specs), 1)
-        self.assertDictEqual(
-            local_repo_specs[0],
-            {
-                'path': self.PATH,
-                'version': None,
-                'name': 'my-repo-name'
-            }
-        )
-
     def test_deployment_legacy_directory_and_module(self):
-        command = self.get_command('-m my-repo-name -d .')
-        repo_specs, local_repo_specs = command.get_specs()
-        self.assertFalse(repo_specs)
-        self.assertEqual(len(local_repo_specs), 1)
+        command = self.get_command('-d . -m my-repo-name')
+        specs = command.get_package_specs()
+        self.assertFalse(specs['components'])
+        self.assertEqual(len(specs['local_components']), 1)
         self.assertDictEqual(
-            local_repo_specs[0],
+            specs['local_components'][0],
             {
                 'path': '.',
                 'version': None,
@@ -151,12 +123,12 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
 
     def get_component(self, cli_args_dict):
         """
-        :param cli_args_dict: key:value arguments to --repo as a ``dict``
+        :param cli_args_dict: key:value arguments to --repository as a ``dict``
         :return: a ``Component``
 
         """
-        spec = args_to_repo_spec(cli_args_dict.items())
-        component = Component.from_repo_spec(spec)
+        spec = args_to_component_spec(cli_args_dict.items())
+        component = Component.from_spec(spec)
         return component
 
     def test_component_name_version_vcs_info(self):
@@ -172,7 +144,7 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
             {
                 'name': 'test',
                 'version': '1.0',
-                'vcs_info': {
+                'vcs': {
                     'vcs_type': 'git',
                     'rev': 'xxx',
                     'branch': 'master',
@@ -204,7 +176,7 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
             },
             {
                 'name': 'test',
-                'vcs_info': {
+                'vcs': {
                     'vcs_type': 'git',
                     'rev': 'xxx',
                     'branch': 'master',
@@ -228,8 +200,8 @@ class TestComponentFromLocalRepoSpec(BaseComponentTestCase):
         :return: a ``Component``
 
         """
-        spec = args_to_local_repo_spec(cli_args_dict.items())
-        component = Component.from_local_repo_spec(spec)
+        spec = args_to_local_component_spec(cli_args_dict.items())
+        component = Component.from_local_spec(spec)
         return component
 
     def test_local_component_path_does_not_exist(self):
@@ -252,7 +224,7 @@ class TestComponentFromLocalRepoSpec(BaseComponentTestCase):
             },
             {
                 'name': self.DIR_NAME,
-                'vcs_info': {'vcs_type': 'git'}
+                'vcs': {'vcs_type': 'git'}
             }
         )
 
@@ -263,7 +235,7 @@ class TestComponentFromLocalRepoSpec(BaseComponentTestCase):
             },
             {
                 'name': self.PARENT_DIR_NAME,
-                'vcs_info': {'vcs_type': 'git'}
+                'vcs': {'vcs_type': 'git'}
             }
         )
 
@@ -274,7 +246,7 @@ class TestComponentFromLocalRepoSpec(BaseComponentTestCase):
             },
             {
                 'name': self.DIR_NAME,
-                'vcs_info': {'vcs_type': 'git'}
+                'vcs': {'vcs_type': 'git'}
             }
         )
 

@@ -1,5 +1,5 @@
-from ..packages import BaseDependency, DEB_PACKAGE
-from .base import DependencyCollector
+from .base import BaseDependency, DependencyCollector
+from .types import DEB_PACKAGE
 
 
 class DebCollector(DependencyCollector):

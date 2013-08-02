@@ -1,8 +1,6 @@
 # coding:utf8
-import json
-
-from ..packages import BaseDependency, NODE_PACKAGE
-from .base import DependencyCollector
+from .base import BaseDependency, DependencyCollector
+from .types import NODE_PACKAGE
 
 
 # npm output looks like the following and we only take the root packages.
@@ -29,7 +27,7 @@ from .base import DependencyCollector
 
 class NodeCollector(DependencyCollector):
 
-    default_command = 'npm --global list'
+    default_command = 'npm --global list && npm --local list'
 
     def parse(self, output):
 

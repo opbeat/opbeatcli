@@ -1,5 +1,5 @@
-from ..packages import BaseDependency, RPM_PACKAGE
-from .base import DependencyCollector
+from .base import BaseDependency, DependencyCollector
+from .types import RPM_PACKAGE
 
 
 class RPMCollector(DependencyCollector):

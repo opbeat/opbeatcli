@@ -32,7 +32,7 @@ def is_vcs_root(path):
     return vcs.get_backend_name(path) is not None
 
 
-class VCSInfo(object):
+class VCS(object):
 
     def __init__(self, rev, vcs_type=None, branch=None, remote_url=None):
 
@@ -65,7 +65,7 @@ class VCSInfo(object):
         backend_class = vcs.get_backend_from_location(path)
         if backend_class:
             backend = backend_class(path)
-            return VCSInfo(
+            return VCS(
                 vcs_type=VCS_NAME_MAP[backend.name],
                 rev=backend.get_revision(path),
                 remote_url=expand_ssh_host_alias(backend.get_url(path)),

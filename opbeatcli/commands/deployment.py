@@ -6,7 +6,10 @@ from collections import namedtuple, defaultdict
 from opbeatcli import settings
 from opbeatcli.log import logger
 from opbeatcli.deployment import get_deployment_data
-from opbeatcli.deployment.stacks import DEPENDENCY_COLLECTORS
+from opbeatcli.deployment.packages import (
+    DEPENDENCY_COLLECTORS,
+    DEPENDENCIES_BY_TYPE
+)
 from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.exceptions import InvalidArgumentError
 from .base import CommandBase
@@ -28,23 +31,33 @@ class KeyValue(namedtuple('BaseKeyValue', ['key', 'value'])):
         return cls(key, value)
 
 
-class RepoSpecValidator(object):
+class PackageSpecValidator(object):
 
-    def __init__(self, **schema):
+    def __init__(self, _name, **schema):
         """
         Schema is a ``dict`` where keys are allowed keys, and their
         ``bool`` values indicate whether the field is required or not.
 
         """
+        self.name = _name
         self.schema = schema
         self.allowed = set(self.schema.keys())
         self.required = set(
             field for field, required in self.schema.items() if required
         )
 
+    def validation_error(self, error_name, attributes):
+        raise InvalidArgumentError(
+            '{name}: {error_name} attribute{plural}: {attributes}'.format(
+            name=self.name,
+            error_name=error_name,
+            plural='s' if len(attributes) > 1 else '',
+            attributes=', '.join(sorted(attributes))
+        ))
+
     def __call__(self, pairs):
         """
-        Parse a repo spec key-value pairs into a dict.
+        Parse a package spec key-value pairs into a dict.
 
         Simple validation of keys/values is performed according
         to ``self.schema``.
@@ -59,23 +72,17 @@ class RepoSpecValidator(object):
         has_duplicate_keys = len(keys) > len(keys_set)
 
         if unknown_keys:
-            raise InvalidArgumentError(
-                'unknown keys: %s'
-                % ', '.join(unknown_keys)
-            )
+            self.validation_error('unknown', unknown_keys)
+
         if missing_keys:
-            raise InvalidArgumentError(
-                'missing keys : %s'
-                % ', '.join(missing_keys)
-            )
+            self.validation_error('missing', missing_keys)
+
         if has_duplicate_keys:
             counter = defaultdict(int)
             for key in keys:
                 counter[key] += 1
             duplicates = [key for key, count in counter.items() if count > 1]
-            raise InvalidArgumentError(
-                'duplicate keys: %s' % ', '.join(duplicates)
-            )
+            self.validation_error('duplicate', duplicates)
 
         spec = dict(zip(keys, values))
 
@@ -87,19 +94,21 @@ class RepoSpecValidator(object):
         return spec
 
 
-PACKAGE_SCHEMA = {'name': True, 'vcs': False, 'remote_url': False,
+PACKAGE_SCHEMA = {'vcs': False, 'remote_url': False,
                   'branch': False, 'rev': False, 'version': False}
 
 
-args_to_repo_spec = RepoSpecValidator(**PACKAGE_SCHEMA)
-args_to_dependency_spec = RepoSpecValidator(
-    type=True,
-    **PACKAGE_SCHEMA
-)
-args_to_local_repo_spec = RepoSpecValidator(
+args_to_component_spec = PackageSpecValidator(
+    '--component',
     path=True,
     name=False,
-    version=False
+    **PACKAGE_SCHEMA
+)
+args_to_dependency_spec = PackageSpecValidator(
+    '--dependency',
+    name=True,
+    type=True,
+    **PACKAGE_SCHEMA
 )
 
 
@@ -110,22 +119,24 @@ class DeploymentCommand(CommandBase):
 
     def run(self):
 
-        repo_specs, dependency_specs, local_repo_specs = self.get_specs()
-        local_hostname = self.args.hostname
-
-        if not self.args.collect_dependency_types:
+        if self.args.collect_dependency_types is None:
             collect_dep_types_specified = False
-            collect_dep_types = DEPENDENCY_COLLECTORS.keys()
+            collect_dep_types = []
         else:
-            collect_dep_types_specified = True
-            collect_dep_types = self.args.collect_dependency_types
+            if not self.args.collect_dependency_types:
+                collect_dep_types_specified = False
+                collect_dep_types = DEPENDENCY_COLLECTORS.keys()
+            else:
+                collect_dep_types_specified = True
+                collect_dep_types = self.args.collect_dependency_types
+
+        component_specs, dependency_specs = self.get_package_specs()
 
         try:
             data = get_deployment_data(
-                local_hostname=local_hostname,
-                repo_specs=repo_specs,
+                local_hostname=self.args.hostname,
+                component_specs=component_specs,
                 dependency_specs=dependency_specs,
-                local_repo_specs=local_repo_specs,
                 collect_dep_types=collect_dep_types,
                 collect_dep_types_specified=collect_dep_types_specified,
             )
@@ -134,22 +145,27 @@ class DeploymentCommand(CommandBase):
         else:
             self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
 
-    def get_specs(self):
-        repo_specs = self.args.repo_specs or []
+    def get_package_specs(self):
+        """
+        Convert package args specified in the arguments into "spec" dicts
+        using their validators.
+
+        """
+        component_specs = self.args.component_specs or []
         dependency_specs = self.args.dependency_specs or []
-        local_repo_specs = self.args.local_repo_specs or []
 
         if self.args.legacy_directory or self.args.legacy_module:
-            if local_repo_specs or repo_specs:
+            if component_specs:
                 self.parser.error(
                     '--directory, -d and --module, -m'
-                    ' cannot be used together with --repo.'
+                    ' cannot be used together with --component.'
                 )
 
             logger.warning(
                 'Warning: --directory, -d and --module, -m are deprecated and'
                 ' will be removed in a future version of opbeatcli.'
-                '\nPlease use --repo instead. See ` opbeat deployment --help\''
+                '\nPlease use --component instead. '
+                ' See ` opbeat deployment --help\''
                 ' for more details.'
             )
 
@@ -158,18 +174,10 @@ class DeploymentCommand(CommandBase):
             ]
             if self.args.legacy_module:
                 spec.append(KeyValue('name', self.args.legacy_module))
-            local_repo_specs.append(spec)
+            component_specs.append(spec)
 
-        if not local_repo_specs:
-            local_repo_specs.append(
-                [KeyValue('path', os.getcwd())]
-            )
-
-        return (
-            [args_to_repo_spec(spec) for spec in repo_specs],
-            [args_to_dependency_spec(spec) for spec in dependency_specs],
-            [args_to_local_repo_spec(spec) for spec in local_repo_specs],
-        )
+        return [args_to_component_spec(spec) for spec in component_specs ],\
+               [args_to_dependency_spec(spec) for spec in dependency_specs],
 
 
     @classmethod
@@ -194,69 +202,91 @@ Override hostname of current machine. Can be set with environment variable
 OPBEAT_HOSTNAME
             """,
         )
+
         subparser.add_argument(
-            '--local-repo',
-            action='append',
-            dest='local_repo_specs',
+            '--component',
             nargs=argparse.ONE_OR_MORE,
-            metavar='attribute:value',
-            type=KeyValue.from_string,
-            help="""
-                A local VCS repository that is part of the app being deployed.
-                Multiple local repositories can be specified by using the
-                --local-repo option multiple times.
-
-                Attributes:
-
-                    path:<local-path>         (required)
-                    name:<custom-name>        (optional)
-                    version:<version-string>  (optional)
-
-                Only path is required. If name isn't specified, the directory
-                name included in path will be used instead. Examples:
-
-                    --local-repo path:/www/app
-                    --local-repo path:/www/app2 name:my-app2
-                    --local-repo path:/www/app3 name:my-app3 version:1.0.0
-
-            """
-        )
-        subparser.add_argument(
-            '--repo',
-            nargs=argparse.ONE_OR_MORE,
-            dest='repo_specs',
+            dest='component_specs',
             metavar='attribute:value',
             action='append',
             type=KeyValue.from_string,
             help=r"""
-                A description of a repository that is part of the app being
-                deployed, but isn't present on the server as a CSV checkout.
-                Multiple repositories can be specified by using the --repo
-                option multiple times.
+                A description of a component of the app being deployed.
+                Multiple components can be specified by using this option
+                multiple times.
 
                 Attributes:
 
+                    path:<local-path>          (required)
                     name:<name>                (required)
                     version:<version-string>   (optional if VCS info specified)
 
-                VCS info attributes:
+                VCS attributes: if the provided path is a VCS checkout,
+                these attributes will be filled automatically:
 
                     vcs:<{vcs_types}>
                     rev:<vcs-revision>
                     branch:<vcs-branch>
                     remote_url:<vcs-remote-url>
 
-                A repository has to have a name, and at least a version or rev.
+                A component has to have a name, and at least a version or rev.
 
                 Examples:
 
-                    --repo name:app version:1.0.0
-                    --repo name:app2 csv:git rev:383dba branch:prod \
-                           remote_url:git@github.com:opbeat/app2.git
+                    --component path:.
+
+                    --component \
+                        path:frontends/web \
+                        name:web-frontend \
+                        version:0.2.1
+
+                    --component \
+                        path:tools/scheduler \
+                        name:scheduler \
+                        version:1.0.0-beta2
+                        csv:git \
+                        rev:383dba \
+                        branch:dev \
+                        remote_url:git@github.com:opbeat/scheduler.git
 
             """
             .format(vcs_types='|'.join(sorted(VCS_NAME_MAP.values()))),
         )
+
+        subparser.add_argument(
+            '--dependency',
+            nargs=argparse.ONE_OR_MORE,
+            dest='dependency_specs',
+            metavar='attribute:value',
+            action='append',
+            type=KeyValue.from_string,
+            help=r"""
+                A description of an installed package that the app being
+                deployed depends on. Multiple dependencies can be specified
+                by using this option multiple times.
+
+                Attributes are the same as with --component. In addition
+                to that, the dependency type has to be specified as well:
+
+                    type:<{dependency_types}>
+
+                A repository has to have a name, and at least a version or rev.
+
+                Examples:
+
+                    --dependency type:other name:nginx version:1.5.3
+                    --dependency type:python name:django version:1.5.0
+                    --dependency type:ruby name:app2 csv:git \
+                                    rev:383dba branch:prod \
+                                    remote_url:git@github.com:opbeat/app2.git
+
+            """
+            .format(
+                vcs_types='|'.join(sorted(VCS_NAME_MAP.values())),
+                dependency_types='|'.join(sorted(DEPENDENCIES_BY_TYPE.keys()))
+            ),
+        )
+
         subparser.add_argument(
             '--collect-dependencies',
             nargs=argparse.ZERO_OR_MORE,
@@ -265,10 +295,8 @@ OPBEAT_HOSTNAME
             help=r"""
             Enable automatic collection of installed dependencies.
             With no arguments, all the predefined dependency types will be
-            collected. You can also choose to collect only some types of
-            dependencies.
-
-            The available types are:
+            attempted to collect. You can also choose to collect only some
+            types of dependencies. The available types are:
 
                 {types}
 
@@ -283,17 +311,18 @@ OPBEAT_HOSTNAME
 {commands}
 
             You can also supply a custom command for each type as long as its
-            output uses the same format as the output of the default one does:
+            output uses the same format as the default command does:
 
-                --collect-dependencies python:'/my-virtualenv/bin/pip freeze'
+                --collect-dependencies \
+                    python:'/my-virtualenv/bin/pip freeze'
 
                 --collect-dependencies \
                     python:'pip freeze && /my-virtualenv/bin/pip freeze'
 
                 --collect-dependencies \
-                    python \
-                    ruby:'bin/custom-script' \
-                    nodejs:'cd /www/webapp && npm --json list'
+                    python deb \
+                    nodejs:'cd /www/webapp && npm --local list' \
+                    ruby:'bin/script
 
 
             """
@@ -302,46 +331,13 @@ OPBEAT_HOSTNAME
                 commands=''.join(sorted(
                     "{0: >23}: {1}\n".format(
                         dep_type, collector.default_command
-                    ).replace('%', '%%')
+                    ).replace('%', '%%')  #
                     for dep_type, collector in DEPENDENCY_COLLECTORS.items()
                 ))
             )
-        ),
-        subparser.add_argument(
-            '--dependency',
-            nargs=argparse.ONE_OR_MORE,
-            dest='dependency_specs',
-            metavar='attribute:value',
-            action='append',
-            type=KeyValue.from_string,
-            help=r"""
-                A description of a dependency that the app being deployed
-                depends on. Multiple dependencies can be specified by using
-                the --dependency option multiple times.
-
-                Attributes:
-
-                    name:<name>
-                    type:<python|nodejs|ruby|other>
-                    version:<version-string>
-                    vcs:<{vcs_types}>
-                    rev:<vcs-revision>
-                    branch:<vcs-branch>
-                    remote_url:<vcs-remote-url>
-
-                A repository has to have a name, and at least a version or rev.
-
-                Examples:
-
-                    --dependency type:python name:django version:1.5.0
-                    --dependency name:app2 csv:git rev:383dba branch:prod \
-                                  remote_url:git@github.com:opbeat/app2.git
-
-            """
-            .format(vcs_types='|'.join(sorted(VCS_NAME_MAP.values()))),
         )
 
-        # Hidden aliases for --repository to preserve
+        # Hidden aliases for --component to preserve
         # backward-compatibility with opbeatcli==1.1.5.
         subparser.add_argument(
             '-d', '--directory',

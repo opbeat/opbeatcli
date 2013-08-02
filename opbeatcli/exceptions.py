@@ -26,7 +26,7 @@ class ClientHTTPError(ClientConnectionError):
 
 
 class CommandError(OpbeatError):
-    pass
+    """Error running an external command."""
 
 
 class CommandNotFoundError(CommandError):

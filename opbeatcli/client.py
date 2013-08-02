@@ -34,9 +34,11 @@ class OpbeatClient(object):
         self.timeout = timeout
         self.dry_run = dry_run
 
-        logger.info('Opbeat client configuration:')
+        self.logger = logger.getChild(type(self).__name__)
+
+        self.logger.info('Opbeat client configuration:')
         for k in ['server', 'organization_id', 'app_id']:
-            logger.info('  %16s: %s' % (k, getattr(self, k)))
+            self.logger.info('  %16s: %s' % (k, getattr(self, k)))
 
     def post(self, uri, data):
         """
@@ -72,12 +74,12 @@ class OpbeatClient(object):
 
         payload = json.dumps(data, indent=2, sort_keys=True)
 
-        logger.debug('> Server: %s', self.server)
-        logger.debug('> HTTP/1.1 POST %s', uri)
-        logger.debug('> %s', payload)
+        self.logger.debug('> Server: %s', self.server)
+        self.logger.debug('> HTTP/1.1 POST %s', uri)
+        self.logger.debug('> %s', payload)
 
         if self.dry_run:
-            logger.info('Not sending because --dry-run.')
+            self.logger.info('Not sending because --dry-run.')
             return
 
         try:
@@ -88,32 +90,32 @@ class OpbeatClient(object):
                 timeout=self.timeout,
             )
         except requests.Timeout as e:
-            logger.error(
+            self.logger.error(
                 'connection error: request timed out'
                 ' (--timeout=%f)',
                 self.timeout
             )
-            logger.debug('request failed', exc_info=True)
+            self.logger.debug('request failed', exc_info=True)
             raise ClientConnectionError(e)
         except requests.ConnectionError as e:
-            logger.error(
+            self.logger.error(
                 'connection error: Unable to reach Opbeat server: %s',
                 url,
             )
-            logger.debug('request failed', exc_info=True)
+            self.logger.debug('request failed', exc_info=True)
             raise ClientConnectionError(e)
         except Exception:
             raise  # Unexpected error, not handled here.
         else:
 
             def log_response(level):
-                logger.log(
+                self.logger.log(
                     level,
                     '< HTTP %d %s',
                     response.status_code,
                     response.reason
                 )
-                logger.log(level, '< %s', response.text)
+                self.logger.log(level, '< %s', response.text)
 
             if response.status_code >= 400:
                 log_response(logging.ERROR)

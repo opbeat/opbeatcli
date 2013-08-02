@@ -1,5 +1,5 @@
-from ..packages import BaseDependency, RUBY_PACKAGE
-from .base import DependencyCollector
+from .base import DependencyCollector, BaseDependency
+from .types import RUBY_PACKAGE
 
 
 class RubyCollector(DependencyCollector):

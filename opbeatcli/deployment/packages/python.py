@@ -2,12 +2,13 @@
 Python requirements and their discovery.
 
 http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-format
+
 """
 import requirements
 
-from ..packages import BaseDependency, PYTHON_PACKAGE
-from ..vcs import VCSInfo
-from .base import DependencyCollector
+from .base import DependencyCollector, BaseDependency
+from .types import PYTHON_PACKAGE
+from ..vcs import VCS
 
 
 class PythonCollector(DependencyCollector):
@@ -23,13 +24,13 @@ class PythonCollector(DependencyCollector):
                 version = None
 
             if 'vcs' not in req:
-                vcs_info = None
+                vcs = None
             else:
                 uri = req['uri']
                 at = uri.rindex('@')
                 # FIXME: rev can also be a tag or branch
                 remote_url, rev = uri[:at], uri[at + 1:]
-                vcs_info = VCSInfo(
+                vcs = VCS(
                     vcs_type=req['vcs'],
                     remote_url=remote_url,
                     rev=rev
@@ -38,7 +39,7 @@ class PythonCollector(DependencyCollector):
             yield PythonDependency(
                 name=req['name'],
                 version=version,
-                vcs_info=vcs_info,
+                vcs=vcs,
             )
 
 
