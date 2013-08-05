@@ -3,48 +3,8 @@ Invoke as `opbeat` or `python -m opbeatcli`.
 
 """
 import sys
-import logging
 
-from opbeatcli.log import logger
-from opbeatcli.cli import parser
-from opbeatcli.exceptions import OpbeatError, ClientConnectionError
-
-
-EXIT_SUCCESS, EXIT_ERROR = 0, 1
-EXIT_CLIENT_ERROR, EXIT_SERVER_ERROR = 4, 5
-
-
-def main():
-    """Run command and return exit status code."""
-
-    if len(sys.argv) < 2:
-        parser.print_help()
-        return EXIT_SUCCESS
-
-    args = parser.parse_args()
-
-    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-
-    Command = args.command_class
-    command = Command(parser=parser, args=args)
-
-    try:
-        command.run()
-    except ClientConnectionError as e:
-        # The error has already been logged by the client.
-        response_status = e.args[0]
-        if response_status < 400:
-            return EXIT_CLIENT_ERROR
-        else:
-            return EXIT_SERVER_ERROR
-    except OpbeatError as e:
-        logger.error(e.message)
-        return EXIT_ERROR
-    except Exception:
-        logger.exception('Error executing command')
-        return EXIT_ERROR
-    else:
-        return EXIT_SUCCESS
+from .core import main
 
 
 if __name__ == '__main__':

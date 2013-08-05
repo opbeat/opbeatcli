@@ -4,7 +4,9 @@ from .types import RUBY_PACKAGE
 
 class RubyCollector(DependencyCollector):
 
-    default_command = 'gem list'
+    default_commands = [
+        'gem list'
+    ]
 
     def parse(self, output):
         for line in output.strip().splitlines():

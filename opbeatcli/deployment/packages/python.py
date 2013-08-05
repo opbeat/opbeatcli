@@ -13,7 +13,9 @@ from ..vcs import VCS
 
 class PythonCollector(DependencyCollector):
 
-    default_command = 'pip freeze'
+    default_commands = [
+        'pip freeze'
+    ]
 
     def parse(self, output):
         for req in requirements.parse(output):

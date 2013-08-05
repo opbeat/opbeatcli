@@ -5,30 +5,39 @@ from collections import namedtuple, defaultdict
 
 from opbeatcli import settings
 from opbeatcli.log import logger
-from opbeatcli.deployment import get_deployment_data
-from opbeatcli.deployment.packages import (
-    DEPENDENCY_COLLECTORS,
-    DEPENDENCIES_BY_TYPE
-)
-from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.exceptions import InvalidArgumentError
+from opbeatcli.deployment import get_deployment_data
+from opbeatcli.deployment.vcs import VCS_NAME_MAP
+from opbeatcli.deployment.packages import (DEPENDENCY_COLLECTORS,
+                                           DEPENDENCIES_BY_TYPE)
 from .base import CommandBase
 
 
 class KeyValue(namedtuple('BaseKeyValue', ['key', 'value'])):
     """A key-value tuple."""
 
+    separator = ':'
+
     @classmethod
     def from_string(cls, string):
         try:
-            key, value = string.split(':', 1)
+            key, value = string.split(cls.separator, 1)
             if not (key and value):
                 raise ValueError()
         except ValueError:
             raise InvalidArgumentError(
-                'not a key=value pair: %r' % string
+                'not a key%svalue pair: %r' % (cls.separator, string)
             )
         return cls(key, value)
+
+
+class KeyOptionalValue(KeyValue):
+
+    @classmethod
+    def from_string(cls, string):
+        if cls.separator in string:
+            return super(KeyOptionalValue, cls).from_string(string)
+        return cls(string, None)
 
 
 class PackageSpecValidator(object):
@@ -176,8 +185,8 @@ class DeploymentCommand(CommandBase):
                 spec.append(KeyValue('name', self.args.legacy_module))
             component_specs.append(spec)
 
-        return map(args_to_component_spec, component_specs),\
-               map(args_to_dependency_spec, dependency_specs),
+        return [args_to_component_spec(spec) for spec in component_specs ],\
+               [args_to_dependency_spec(spec) for spec in dependency_specs],
 
 
     @classmethod
@@ -261,9 +270,9 @@ OPBEAT_HOSTNAME
             action='append',
             type=KeyValue.from_string,
             help=r"""
-                A description of an installed package that the app being
-                deployed depends on. Multiple dependencies can be specified
-                by using this option multiple times.
+                A description of an installed third-party package that the app
+                being deployed depends on. Multiple dependencies can be
+                specified by using this option multiple times.
 
                 Attributes are the same as with --component. There is no path,
                 however. In addition to the common attributes, the type
@@ -271,7 +280,7 @@ OPBEAT_HOSTNAME
 
                     type:<{dependency_types}>
 
-                A repository has to have a name, and at least a version or rev.
+                A dependency has to have a name, and at least a version or rev.
 
                 Examples:
 
@@ -291,8 +300,9 @@ OPBEAT_HOSTNAME
         subparser.add_argument(
             '--collect-dependencies',
             nargs=argparse.ZERO_OR_MORE,
-            metavar='TYPE',
+            metavar='TYPE[:COMMAND]',
             dest='collect_dependency_types',
+            type=KeyOptionalValue.from_string,
             help=r"""
             Enable automatic collection of installed dependencies.
             With no arguments, all the predefined dependency types will be
@@ -306,32 +316,44 @@ OPBEAT_HOSTNAME
                 --collect-dependencies
                 --collect-dependencies python ruby
 
-            For each type, there is a default shell command which is run to
-            collect the dependencies:
+            For each type, there is one or more default shell commands which
+            are run to collect the dependencies:
 
-{commands}
+{default_commands}
 
-            You can also supply a custom command for each type as long as its
-            output uses the same format as the default command does:
+            You can also supply one or more custom commands for each type as
+            long as the output uses the same format as the default commands do:
+
+            Collect only node.js dependencies using a custom command in
+            addition to the default ones:
+
+                --collect-dependencies \
+                    nodejs \
+                    nodejs:'cd /webapp2 && npm --local --json list' \
+
+            Use only a custom collection command:
 
                 --collect-dependencies \
                     python:'/my-virtualenv/bin/pip freeze'
 
-                --collect-dependencies \
-                    python:'pip freeze && /my-virtualenv/bin/pip freeze'
+            Default commands for some types, custom commands for others:
 
                 --collect-dependencies \
-                    python deb \
-                    nodejs:'cd /www/webapp && npm --local list' \
+                    python \
+                    deb \
+                    nodejs:'cd /www/webapp && npm --local --json list' \
                     ruby:'bin/script
-
 
             """
             .format(
                 types=' '.join(sorted(DEPENDENCY_COLLECTORS.keys())),
-                commands=''.join(sorted(
-                    "{0: >23}: {1}\n".format(
-                        dep_type, collector.default_command
+                default_commands=''.join(sorted(
+                    "{type: >23}: {commands}\n"
+                    .format(
+                        type=dep_type,
+                        commands=('\n%s' % (' ' * 25)).join(
+                            collector.default_commands
+                        )
                     ).replace('%', '%%')  #
                     for dep_type, collector in DEPENDENCY_COLLECTORS.items()
                 ))

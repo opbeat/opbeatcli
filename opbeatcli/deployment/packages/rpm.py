@@ -4,8 +4,9 @@ from .types import RPM_PACKAGE
 
 class RPMCollector(DependencyCollector):
 
-    default_command = \
+    default_commands = [
         r"rpm --query --all --queryformat='%{NAME} %{VERSION}%{RELEASE}\n'"
+    ]
 
     def parse(self, output):
         for line in output.splitlines():

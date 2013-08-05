@@ -2,13 +2,13 @@
 Opbeat log API client.
 
 """
+import json
 import logging
 
 import requests
 
 from opbeatcli import __version__
 from opbeatcli.log import logger
-from opbeatcli.utils import json
 from opbeatcli import settings
 from opbeatcli.exceptions import (
     ClientConnectionError,

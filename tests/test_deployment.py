@@ -2,10 +2,11 @@ import os
 from opbeatcli.exceptions import InvalidArgumentError
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
+from opbeatcli.core import get_command
 from opbeatcli import cli
 from opbeatcli.commands.deployment import (
     KeyValue, PackageSpecValidator,
-    args_to_component_spec, args_to_local_component_spec,
+    args_to_component_spec,
     DeploymentCommand
 )
 
@@ -54,6 +55,13 @@ class BaseDeploymentTestCase(unittest.TestCase):
         os.chdir(cls.PATH)
 
 
+class CLITest(BaseDeploymentTestCase):
+
+    def test_1(self):
+        command = get_command('')
+
+
+
 class BaseComponentTestCase(BaseDeploymentTestCase):
 
     get_component = None
@@ -91,12 +99,11 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
 
     def test_deployment_legacy_directory(self):
         command = self.get_command('-d .')
-        specs = command.get_package_specs()
-        self.assertFalse(specs['components'])
-        self.assertFalse(specs['dependencies'])
-        self.assertEqual(len(specs['local_components']), 1)
+        component_specs, dependency_specs = command.get_package_specs()
+        self.assertFalse(dependency_specs)
+        self.assertEqual(len(component_specs), 1)
         self.assertDictEqual(
-            specs['local_components'][0],
+            component_specs[0],
             {
                 'path': '.',
                 'version': None,
@@ -109,7 +116,7 @@ class TestDeploymentCommandLineArgs(BaseDeploymentTestCase):
         specs = command.get_package_specs()
         self.assertFalse(specs['components'])
         self.assertEqual(len(specs['local_components']), 1)
-        self.assertDictEqual(
+        self.assertDictContainsSubset(
             specs['local_components'][0],
             {
                 'path': '.',
@@ -134,6 +141,7 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
     def test_component_name_version_vcs_info(self):
         self.assert_args_to_component(
             {
+                'path': '/foo',
                 'name': 'test',
                 'version': '1.0',
                 'vcs': 'git',
@@ -142,6 +150,7 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
                 'remote_url': 'git@github.com:opbeat/opbeatcli.git',
             },
             {
+                'path': '/foo',
                 'name': 'test',
                 'version': '1.0',
                 'vcs': {
@@ -156,10 +165,13 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
     def test_component_name_version_no_rev(self):
         self.assert_args_to_component(
             {
+                'path': '/foo',
                 'name': 'test',
                 'version': '1.0',
+
             },
             {
+                'path': '/foo',
                 'name': 'test',
                 'version': '1.0',
             }
@@ -168,6 +180,7 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
     def test_component_rev_no_version(self):
         self.assert_args_to_component(
             {
+                'path': '/foo',
                 'name': 'test',
                 'vcs': 'git',
                 'rev': 'xxx',
@@ -175,6 +188,7 @@ class TestComponentFromRepoSpec(BaseComponentTestCase):
                 'remote_url': 'git@github.com:opbeat/opbeatcli.git',
             },
             {
+                'path': '/foo',
                 'name': 'test',
                 'vcs': {
                     'vcs_type': 'git',
@@ -200,8 +214,8 @@ class TestComponentFromLocalRepoSpec(BaseComponentTestCase):
         :return: a ``Component``
 
         """
-        spec = args_to_local_component_spec(cli_args_dict.items())
-        component = Component.from_local_spec(spec)
+        spec = args_to_component_spec(cli_args_dict.items())
+        component = Component.from_spec(spec)
         return component
 
     def test_local_component_path_does_not_exist(self):

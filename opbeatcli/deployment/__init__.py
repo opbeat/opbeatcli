@@ -1,4 +1,5 @@
-from itertools import chain
+from operator import attrgetter
+from itertools import chain, groupby
 
 from opbeatcli.deployment import serialize
 from opbeatcli.exceptions import InvalidArgumentError, CommandNotFoundError
@@ -24,12 +25,13 @@ def get_deployment_data(local_hostname, component_specs, dependency_specs,
 
 
 def _collect_dependencies(for_types, types_specified):
-    for dep_type in for_types:
 
-        if ':' not in dep_type:
-            custom_command = None
-        else:
-            dep_type, custom_command = dep_type.split(':', 1)
+    get_type = attrgetter('key')
+    get_command = attrgetter('value')
+
+    groups = groupby(sorted(for_types, key=get_type), key=get_type)
+
+    for dep_type, group in groups:
 
         try:
             collector_class = DEPENDENCY_COLLECTORS[dep_type]
@@ -38,7 +40,21 @@ def _collect_dependencies(for_types, types_specified):
                 'Unknown dependency type to collect: %r' % dep_type
             )
 
-        collector = collector_class(custom_command=custom_command)
+        custom_commands = map(get_command, group)
+
+        if len(custom_commands) != len(set(custom_commands)):
+            raise InvalidArgumentError(
+                'Duplicate dependency type: %s' % dep_type
+            )
+
+        commands = []
+        for custom_command in custom_commands:
+            if custom_command is None:
+                commands.extend(collector_class.default_commands)
+            else:
+                commands.append(custom_command)
+
+        collector = collector_class(custom_commands=commands)
 
         try:
             for dep in collector.collect():

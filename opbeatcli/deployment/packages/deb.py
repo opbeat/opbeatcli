@@ -4,8 +4,9 @@ from .types import DEB_PACKAGE
 
 class DebCollector(DependencyCollector):
 
-    default_command = \
+    default_commands = [
         r"dpkg-query --show --showformat='${package} ${version}\n'"
+    ]
 
     def parse(self, output):
         for line in output.splitlines():

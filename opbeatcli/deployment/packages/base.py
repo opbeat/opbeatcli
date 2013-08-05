@@ -88,20 +88,16 @@ class BaseDependency(BasePackage):
 
 class DependencyCollector(object):
 
-    default_command = None
-    custom_command = None
+    default_commands = []
+    custom_commands = None
 
-    def __init__(self, custom_command=None):
-        self.custom_command = custom_command
+    def __init__(self, custom_commands=None):
+        self.custom_commands = custom_commands
         self.logger = logger.getChild(type(self).__name__)
 
-    def run_command(self):
+    def run_command(self, command):
         COMMAND_NOT_FOUND = 127
-
-        command = self.custom_command or self.default_command
-
         self.logger.info(command)
-
         process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         out, err = process.communicate()
         ret = process.poll()
@@ -120,4 +116,8 @@ class DependencyCollector(object):
 
     def collect(self):
         """Return a list of dependencies."""
-        return self.parse(self.run_command())
+        commands = self.custom_commands or self.default_commands
+        for command in commands:
+            print command
+            for dep in self.parse(self.run_command(command)):
+                yield dep
