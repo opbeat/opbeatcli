@@ -34,7 +34,7 @@ class OpbeatClient(object):
         self.timeout = timeout
         self.dry_run = dry_run
 
-        self.logger = logger.getChild(type(self).__name__)
+        self.logger = logger.getChild('client')
 
         self.logger.info('Opbeat client configuration:')
         for k in ['server', 'organization_id', 'app_id']:

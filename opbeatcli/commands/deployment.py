@@ -145,7 +145,7 @@ def collect_dependencies(type_command_args, ignore_no_command):
                 'Unknown dependency type to collect: %r' % dep_type
             )
 
-        custom_commands = map(get_command, type_command_args)
+        custom_commands = list(map(get_command, type_command_args))
 
         if len(custom_commands) != len(set(custom_commands)):
             raise InvalidArgumentError(

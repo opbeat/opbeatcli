@@ -99,12 +99,14 @@ class DependencyCollector(object):
 
     def run_command(self, command):
         COMMAND_NOT_FOUND = 127
-        self.logger.info(command)
+        self.logger.debug('collecting dependencies using command: %r', command)
         process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         out, err = process.communicate()
         ret = process.poll()
 
         if ret:
+            self.logger.debug('=> exit status: %s', ret)
+            self.logger.debug('=> stderr: %s', err)
             if ret == COMMAND_NOT_FOUND:
                 raise CommandNotFoundError(err)
             raise CommandError(err)
@@ -121,4 +123,5 @@ class DependencyCollector(object):
         commands = self.custom_commands or self.default_commands
         for command in commands:
             for dep in self.parse(self.run_command(command)):
+                self.logger.debug('=> %r', dep)
                 yield dep
