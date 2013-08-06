@@ -37,8 +37,6 @@ class BasePackage(object):
     def spec_to_kwargs(cls, spec):
         """Process a validated spec and prepare common keyword arguments.
 
-        :type spec: dict
-
         """
         kwargs = {
             'name': spec['name'],
@@ -58,6 +56,10 @@ class BasePackage(object):
 
     @classmethod
     def from_spec(cls, spec):
+        """
+
+        :arg spec: a ``dict`` of parsed and validated arguments.
+        """
         return cls(**cls.spec_to_kwargs(spec))
 
 
@@ -118,6 +120,5 @@ class DependencyCollector(object):
         """Return a list of dependencies."""
         commands = self.custom_commands or self.default_commands
         for command in commands:
-            print command
             for dep in self.parse(self.run_command(command)):
                 yield dep

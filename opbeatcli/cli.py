@@ -32,6 +32,11 @@ class OpbeatHelpFormatter(argparse.RawDescriptionHelpFormatter):
         text = dedent(text).strip() + '\n\n'
         return text.splitlines()
 
+    def format_help(self):
+        help = super(OpbeatHelpFormatter, self).format_help()
+        if help:
+            help += '\n'
+        return help
 
 parser = argparse.ArgumentParser(
     description='Interact with Opbeat',
@@ -104,7 +109,9 @@ subparsers = parser.add_subparsers()
 for name, Command in COMMANDS.items():
     subparser = subparsers.add_parser(
         name=name,
-        formatter_class=OpbeatHelpFormatter
+        description=dedent(Command.DESCRIPTION),
+        epilog=dedent(Command.EPILOG),
+        formatter_class=OpbeatHelpFormatter,
     )
     Command.add_command_args(subparser)
     subparser.set_defaults(command_class=Command)

@@ -2,11 +2,15 @@ import os
 #noinspection PyCompatibility
 import argparse
 from collections import namedtuple, defaultdict
+from operator import attrgetter
+from itertools import chain, groupby
 
 from opbeatcli import settings
 from opbeatcli.log import logger
-from opbeatcli.exceptions import InvalidArgumentError
-from opbeatcli.deployment import get_deployment_data
+from opbeatcli.exceptions import InvalidArgumentError, CommandNotFoundError
+from opbeatcli.deployment.packages.component import Component
+from opbeatcli.deployment.packages.base import BaseDependency
+from opbeatcli.deployment import serialize
 from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.deployment.packages import (DEPENDENCY_COLLECTORS,
                                            DEPENDENCIES_BY_TYPE)
@@ -42,7 +46,7 @@ class KeyOptionalValue(KeyValue):
 
 class PackageSpecValidator(object):
 
-    def __init__(self, _name, **schema):
+    def __init__(self, _name='', **schema):
         """
         Schema is a ``dict`` where keys are allowed keys, and their
         ``bool`` values indicate whether the field is required or not.
@@ -57,12 +61,14 @@ class PackageSpecValidator(object):
 
     def validation_error(self, error_name, attributes):
         raise InvalidArgumentError(
-            '{name}: {error_name} attribute{plural}: {attributes}'.format(
-            name=self.name,
-            error_name=error_name,
-            plural='s' if len(attributes) > 1 else '',
-            attributes=', '.join(sorted(attributes))
-        ))
+            '{name}: {error_name} attribute{plural}: {attributes}'
+            .format(
+                name=self.name,
+                error_name=error_name,
+                plural='s' if len(attributes) > 1 else '',
+                attributes=', '.join(sorted(attributes))
+            )
+        )
 
     def __call__(self, pairs):
         """
@@ -72,7 +78,6 @@ class PackageSpecValidator(object):
         to ``self.schema``.
 
         """
-
         keys, values = zip(*pairs)
         keys_set = set(keys)
 
@@ -82,10 +87,8 @@ class PackageSpecValidator(object):
 
         if unknown_keys:
             self.validation_error('unknown', unknown_keys)
-
         if missing_keys:
             self.validation_error('missing', missing_keys)
-
         if has_duplicate_keys:
             counter = defaultdict(int)
             for key in keys:
@@ -103,8 +106,13 @@ class PackageSpecValidator(object):
         return spec
 
 
-PACKAGE_SCHEMA = {'vcs': False, 'remote_url': False,
-                  'branch': False, 'rev': False, 'version': False}
+PACKAGE_SCHEMA = {
+    'vcs': False,
+    'remote_url': False,
+    'branch': False,
+    'rev': False,
+    'version': False
+}
 
 
 args_to_component_spec = PackageSpecValidator(
@@ -121,50 +129,95 @@ args_to_dependency_spec = PackageSpecValidator(
 )
 
 
-class DeploymentCommand(CommandBase):
+def collect_dependencies(type_command_args, ignore_no_command):
 
-    name = 'deployment'
-    description = 'Send deployment info.'
+    get_type = attrgetter('key')
+    get_command = attrgetter('value')
+
+    groups = groupby(sorted(type_command_args, key=get_type), key=get_type)
+
+    for dep_type, type_command_args in groups:
+
+        try:
+            collector_class = DEPENDENCY_COLLECTORS[dep_type]
+        except KeyError:
+            raise InvalidArgumentError(
+                'Unknown dependency type to collect: %r' % dep_type
+            )
+
+        custom_commands = map(get_command, type_command_args)
+
+        if len(custom_commands) != len(set(custom_commands)):
+            raise InvalidArgumentError(
+                'Duplicate dependency type: %s' % dep_type
+            )
+
+        commands = []
+        for custom_command in custom_commands:
+            if custom_command is None:
+                commands.extend(collector_class.default_commands)
+            else:
+                commands.append(custom_command)
+
+        collector = collector_class(custom_commands=commands)
+
+        try:
+            for dep in collector.collect():
+                yield dep
+        except CommandNotFoundError:
+            if not ignore_no_command:
+                # We can ignore this error unless the user explicitely asked
+                # for this type (and also possibly supplied a custom command).
+                raise
+
+
+class DeploymentCommand(CommandBase):
 
     def run(self):
 
-        if self.args.collect_dependency_types is None:
-            collect_dep_types_specified = False
-            collect_dep_types = []
-        else:
-            if not self.args.collect_dependency_types:
-                collect_dep_types_specified = False
-                collect_dep_types = DEPENDENCY_COLLECTORS.keys()
-            else:
-                collect_dep_types_specified = True
-                collect_dep_types = self.args.collect_dependency_types
-
-        component_specs, dependency_specs = self.get_package_specs()
-
         try:
-            data = get_deployment_data(
+
+            data = serialize.deployment(
                 local_hostname=self.args.hostname,
-                component_specs=component_specs,
-                dependency_specs=dependency_specs,
-                collect_dep_types=collect_dep_types,
-                collect_dep_types_specified=collect_dep_types_specified,
+                packages=self.get_all_packages(),
             )
+
         except InvalidArgumentError as e:
             self.parser.error(e.message)
         else:
             self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
 
-    def get_package_specs(self):
+    def get_all_packages(self):
+        return chain(
+            self.get_packages_from_args(),
+            self.collect_dependencies()
+        )
+
+    def collect_dependencies(self):
+        if self.args.collect_deps is None:
+            return []
+
+        type_command_args = self.args.collect_deps or [
+            KeyOptionalValue.from_string(type_)
+            for type_ in DEPENDENCY_COLLECTORS.keys()
+        ]
+
+        return collect_dependencies(
+            type_command_args,
+            ignore_no_command=not self.args.collect_deps,
+        )
+
+    def get_packages_from_args(self):
         """
         Convert package args specified in the arguments into "spec" dicts
         using their validators.
 
         """
-        component_specs = self.args.component_specs or []
-        dependency_specs = self.args.dependency_specs or []
+        components = self.args.components or []
+        dependencies = self.args.dependencies or []
 
         if self.args.legacy_directory or self.args.legacy_module:
-            if component_specs:
+            if components:
                 self.parser.error(
                     '--directory, -d and --module, -m'
                     ' cannot be used together with --component.'
@@ -178,16 +231,57 @@ class DeploymentCommand(CommandBase):
                 ' for more details.'
             )
 
-            spec = [
+            attributes = [
                 KeyValue('path', self.args.legacy_directory or os.getcwd())
             ]
             if self.args.legacy_module:
-                spec.append(KeyValue('name', self.args.legacy_module))
-            component_specs.append(spec)
+                attributes.append(KeyValue('name', self.args.legacy_module))
+            components.append(attributes)
 
-        return [args_to_component_spec(spec) for spec in component_specs ],\
-               [args_to_dependency_spec(spec) for spec in dependency_specs],
+        components = [
+            Component.from_spec(args_to_component_spec(attributes))
+            for attributes in components
+        ]
 
+        dependencies = [
+            BaseDependency.from_spec(args_to_dependency_spec(attributes))
+            for attributes in dependencies
+        ]
+
+        return components + dependencies
+
+
+    DESCRIPTION = """
+Introduction:
+    This command registers a deployment of an application to a machine with
+    the Opbeat API. Deployment tracking enables advanced features of the
+    Opbeat platform, such as version history and the ability to relate errors
+    with particular deployments, etc.
+
+    It is meant to be run on the machine where the application is being
+    deployed to. The data sent contains a list of installed packages
+    (application components and dependencies) that all together make up the
+    application and its runtime environment at the time of deployment.
+
+    Component:
+        A component is a named and versioned software package that is
+        part of your application and is directly maintained by the
+        organization. Many apps only consist of one main component, but others
+        can have many individual components that together make up the
+        application. Components need to specified manually on the command line.
+
+    Dependency:
+        A dependency is a named and versioned third-party software package the
+        application in any way depends on or is part of its runtime
+        environment. It can be a code library, a tool, server software, etc.
+        Dependencies can be specified manually and/or automatically collected
+        using this tool.
+
+    Generally, the more information about installed packages is provided, the
+    more useful deployment tracking becomes.
+
+
+"""
 
     @classmethod
     def add_command_args(cls, subparser):
@@ -207,15 +301,15 @@ class DeploymentCommand(CommandBase):
             dest='hostname',
             default=os.environ.get('OPBEAT_HOSTNAME', settings.HOSTNAME),
             help="""
-Override hostname of current machine. Can be set with environment variable
-OPBEAT_HOSTNAME
+            Override hostname of current machine. Can be set with environment
+            variable OPBEAT_HOSTNAME.
             """,
         )
 
         subparser.add_argument(
             '--component',
             nargs=argparse.ONE_OR_MORE,
-            dest='component_specs',
+            dest='components',
             metavar='attribute:value',
             action='append',
             type=KeyValue.from_string,
@@ -227,7 +321,7 @@ OPBEAT_HOSTNAME
                 Attributes:
 
                     path:<local-path>          (required)
-                    name:<name>                (required)
+                    name:<name>                (optional)
                     version:<version-string>   (optional if VCS info specified)
 
                 VCS attributes: if the provided path is a VCS checkout,
@@ -238,7 +332,7 @@ OPBEAT_HOSTNAME
                     branch:<vcs-branch>
                     remote_url:<vcs-remote-url>
 
-                A component has to have a name, and at least a version or rev.
+                A component has to have a path, and at least a version or rev.
 
                 Examples:
 
@@ -252,7 +346,6 @@ OPBEAT_HOSTNAME
                     --component \
                         path:tools/scheduler \
                         name:scheduler \
-                        version:1.0.0-beta2
                         vcs:git \
                         rev:383dba \
                         branch:dev \
@@ -265,7 +358,7 @@ OPBEAT_HOSTNAME
         subparser.add_argument(
             '--dependency',
             nargs=argparse.ONE_OR_MORE,
-            dest='dependency_specs',
+            dest='dependencies',
             metavar='attribute:value',
             action='append',
             type=KeyValue.from_string,
@@ -292,7 +385,6 @@ OPBEAT_HOSTNAME
 
             """
             .format(
-                vcs_types='|'.join(sorted(VCS_NAME_MAP.values())),
                 dependency_types='|'.join(sorted(DEPENDENCIES_BY_TYPE.keys()))
             ),
         )
@@ -300,8 +392,8 @@ OPBEAT_HOSTNAME
         subparser.add_argument(
             '--collect-dependencies',
             nargs=argparse.ZERO_OR_MORE,
-            metavar='TYPE[:COMMAND]',
-            dest='collect_dependency_types',
+            metavar='type[:command]',
+            dest='collect_deps',
             type=KeyOptionalValue.from_string,
             help=r"""
             Enable automatic collection of installed dependencies.
@@ -351,7 +443,7 @@ OPBEAT_HOSTNAME
                     "{type: >23}: {commands}\n"
                     .format(
                         type=dep_type,
-                        commands=('\n%s' % (' ' * 25)).join(
+                        commands=('\n' + ' '*25).join(
                             collector.default_commands
                         )
                     ).replace('%', '%%')  #
@@ -372,3 +464,59 @@ OPBEAT_HOSTNAME
             dest='legacy_module',
             help=argparse.SUPPRESS,
         )
+
+    EPILOG = r"""
+Examples:
+
+    Single-component app in the current directory that is a VCS checkout,
+    and default dependencies collection:
+
+        $ opbeat deployment --collect-dependencies --component path:.
+
+    Multiple components as VCS checkouts:
+
+        $ opbeat deployment \
+            --collect-dependencies \
+            --component path:/project/frontend \
+            --component path:/project/worker
+
+    Components not present as VCS checkouts:
+
+        $ opbeat deployment \
+            --collect-dependencies \
+            --component \
+                path:/project/frontend \
+                version:1.3.2 \
+            --component \
+                path:/project/backend \
+                name:backend-server \
+                version:1.6.0 \
+                vcs:git \
+                rev:383dba \
+                branch:master \
+                remote_url:git@github.com:example/backend-server.git
+
+    Complex example:
+
+        $ opbeat deployment \
+            --component \
+                name:pay-webapp \
+                path:payments/frontend  \
+            --component \
+                name:pay-server \
+                path:payments/server \
+            --component \
+                name:pay-worker \
+                path:payments/worker \
+                version:$(payments/worker/bin/worker --version) \
+            --dependency \
+                type:other \
+                name:nginx \
+                version:$(nginx -v 2>&1 | cut -d / -f 2) \
+            --collect-dependencies \
+                deb ruby python \
+                python:'payments/server/virtualenv/bin/pip freeze' \
+                nodejs:'cd payments/frontend && npm --local --json list'
+
+
+"""

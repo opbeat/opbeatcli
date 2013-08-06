@@ -4,7 +4,8 @@ from opbeatcli.log import logger
 
 class CommandBase(object):
 
-    description = None
+    DESCRIPTION = ''
+    EPILOG = ''
 
     def __init__(self, parser, args):
         """

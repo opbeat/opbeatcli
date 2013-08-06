@@ -1,0 +1,26 @@
+libaio 0.3.1095.fc17
+python3 3.2.37.fc17
+libsysfs 2.1.011.fc17
+s3cmd 1.0.11.fc17
+grub2-tools 2.00.39.fc17
+gettext-libs 0.18.1.114.fc17
+pciutils 3.1.91.fc17
+ruby-irb 1.9.3.44831.fc17
+mailx 12.56.fc17
+perl-Net-LibIDN 0.128.fc17
+krb5-devel 1.10.212.fc17
+festival-speechtools-libs 1.2.9620.fc17
+nodejs-compat-symlinks 11.fc16
+perl-Socket-GetAddrInfo 0.191.fc17
+pcre 8.217.fc17
+nodejs-ini 1.0.22.fc17
+perl-HTML-Tagset 3.2010.fc17
+libreport-filesystem 2.1.41.fc17
+gpg-pubkey 3b4e5d824e9fd1c4
+libsepol-devel 2.1.73.fc17
+ncurses-libs 5.911.20130511.fc17
+libxml-devel 1.8.1728.fc17
+dbus 1.4.107.fc17
+nss-myhostname 0.32.fc17
+util-linux 2.21.24.fc17
+
