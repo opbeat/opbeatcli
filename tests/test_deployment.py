@@ -123,7 +123,7 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             --component path:/dummy/component name:now version:{now}
             --dependency type:other name:now version:{now}
 
-        """
+        """.format(now=now)
         self.assertEqual(main(settings.AUTH_ARGS + args.split()), 0)
 
     def test_deployment_help(self):
