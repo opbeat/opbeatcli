@@ -15,7 +15,8 @@ class CommandBase(object):
         """
         self.parser = parser
         self.args = args
-        self.logger = logger.getChild(type(self).__name__)
+        self.logger = logger.getChild(
+            type(self).__name__.replace('Command', '').lower())
 
     def run(self):
         """Do the actual work."""

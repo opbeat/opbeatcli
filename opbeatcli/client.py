@@ -115,7 +115,8 @@ class OpbeatClient(object):
                     response.status_code,
                     response.reason
                 )
-                self.logger.log(level, '< %s', response.text)
+                if response.text.strip():
+                    self.logger.log(level, '< %s', response.text)
 
             if response.status_code >= 400:
                 log_response(logging.ERROR)
@@ -123,4 +124,3 @@ class OpbeatClient(object):
 
             else:
                 log_response(logging.DEBUG)
-                return json.loads(response.text)

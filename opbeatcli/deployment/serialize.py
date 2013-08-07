@@ -20,7 +20,18 @@ def deployment(local_hostname, packages):
 def package(pkg):
     """
     :type pkg: BasePackage
+
     """
+
+    def drop_none_keys(dct):
+        return dict(
+            (key, (drop_none_keys(value)
+                   if isinstance(value, dict)
+                   else value))
+            for key, value in dct.items()
+            if value is not None
+        )
+
     data = {
         'module': {
             'name': pkg.name,
@@ -39,4 +50,5 @@ def package(pkg):
             'repository': pkg.vcs.remote_url,
             'branch': pkg.vcs.branch,
         }
-    return data
+
+    return drop_none_keys(data)

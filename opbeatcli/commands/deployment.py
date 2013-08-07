@@ -174,18 +174,29 @@ def collect_dependencies(type_command_args, ignore_no_command):
 class DeploymentCommand(CommandBase):
 
     def run(self):
-        self.logger.debug('Registering deployment')
+        self.logger.info('Registering deployment @ %s', self.args.hostname)
         try:
             data = self.get_data()
         except InvalidArgumentError as e:
             self.parser.error(e.message)
         else:
+            self.logger.info('Sending data')
             self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
+            self.logger.info('Done')
 
     def get_data(self):
+        packages = list(self.get_all_packages())
+
+        component_count = sum(package.package_type == Component.package_type
+                              for package in packages)
+        self.logger.info('The app (%s) has %d components and %d dependencies',
+                         self.args.app_id,
+                         component_count,
+                         len(packages) - component_count)
+
         return serialize.deployment(
             local_hostname=self.args.hostname,
-            packages=self.get_all_packages(),
+            packages=packages,
         )
 
     def get_all_packages(self):
