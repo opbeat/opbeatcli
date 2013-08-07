@@ -13,7 +13,7 @@ LEGACY_COMPONENT_PACKAGE = 'repository'
 def deployment(local_hostname, packages):
     return {
         'releases': [package(pkg) for pkg in packages],
-        'machines': {'hostname': local_hostname},
+        'machines': [{'hostname': local_hostname}],
     }
 
 

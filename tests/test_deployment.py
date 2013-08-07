@@ -1,13 +1,19 @@
 import os
 import shlex
 from operator import attrgetter
+from opbeatcli.deployment.packages.deb import DebDependency
+from opbeatcli.deployment.packages.nodejs import NodeDependency
 
 from opbeatcli.deployment.packages.other import OtherDependency
+from opbeatcli.deployment.packages.python import PythonDependency
+from opbeatcli.deployment.packages.rpm import RPMDependency
+from opbeatcli.deployment.packages.ruby import RubyDependency
 from opbeatcli.exceptions import InvalidArgumentError, DependencyParseError
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
 from opbeatcli.core import get_command
 from opbeatcli.commands.deployment import KeyValue, PackageSpecValidator
+
 
 try:
     import unittest2 as unittest
@@ -44,6 +50,8 @@ class TestPackageSpecArgParsingAndValidation(unittest.TestCase):
 
 
 class BaseDeploymentCommandTestCase(unittest.TestCase):
+
+    maxDiff = 9999
 
     @classmethod
     def setUpClass(cls):
@@ -194,6 +202,75 @@ class DeploymentPackagesCLI(BaseDeploymentCommandTestCase):
             command.get_packages_from_args()
 
 
+class DeploymentVersion1SerializationTest(BaseDeploymentCommandTestCase):
+    """Test serialization as per the Opbeat API version 1 docs."""
+
+    def test_deployment_v1_serialization(self):
+        command = self.get_command("""
+            --hostname HOSTNAME
+            --component path:/PATH name:COMPONENT1 version:1.0
+            --component path:/PATH name:COMPONENT2 version:VERSION vcs:git
+                        branch:BRANCH rev:REV remote_url:REMOTE_URL
+
+            --dependency type:other name:DEPENDENCY1 version:VERSION
+            --dependency name:DEPENDENCY2 type:other version:VERSION vcs:git
+                        branch:BRANCH rev:REV remote_url:REMOTE_URL
+
+        """)
+
+        data = command.get_data()
+        self.assertDictEqual(data, {
+            'machines': [
+                {
+                    'hostname': 'HOSTNAME'
+                }
+            ],
+            'releases': [
+                {
+                    'path': '/PATH',
+                    'version': '1.0',
+                    'module': {
+                        'module_type': 'repository',
+                        'name': 'COMPONENT1'
+                    }
+                },
+                {
+                    'path': '/PATH',
+                    'version': 'VERSION',
+                    'vcs': {
+                        'type': 'git',
+                        'branch': 'BRANCH',
+                        'repository': 'REMOTE_URL',
+                        'revision': 'REV'
+                    },
+                    'module': {
+                        'module_type': 'repository',
+                        'name': 'COMPONENT2',
+                    }
+                },
+                {
+                    'version': 'VERSION',
+                    'module': {
+                        'module_type': 'other',
+                        'name': 'DEPENDENCY1',
+                    }
+                },
+                {
+                    'version': 'VERSION',
+                    'vcs': {
+                        'type': 'git',
+                        'branch': 'BRANCH',
+                        'repository': 'REMOTE_URL',
+                        'revision': 'REV'},
+                    'module': {
+                        'name': 'DEPENDENCY2',
+                        'module_type': 'other',
+                    }
+                }
+            ]
+        })
+
+
 class TestDependencyCollection(BaseDeploymentCommandTestCase):
     """Test automatic dependency collection with valid and invalid output."""
 
@@ -219,6 +296,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
         )
         dependencies = list(command.collect_dependencies())
         self.assertEqual(len(dependencies), 8)
+        self.assertTrue(all(isinstance(dep, PythonDependency)
+                            for dep in dependencies))
         expected = [
             {'name': 'nose', 'version': '1.3.0'},
             {'name': 'opbeatcli-dev', 'vcs': {
@@ -246,6 +325,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
 
         self.assertEqual(len(dependencies), 5)
 
+        self.assertTrue(all(isinstance(dep, NodeDependency)
+                            for dep in dependencies))
         dependencies = sorted(dependencies, key=attrgetter('name'))
 
         expected = [
@@ -273,6 +354,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
         dependencies = list(command.collect_dependencies())
 
         self.assertEqual(len(dependencies), 36)
+        self.assertTrue(all(isinstance(dep, RubyDependency)
+                            for dep in dependencies))
 
         expected = [
             {'name': 'actionmailer', 'version': '3.2.12'},
@@ -299,6 +382,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
 
         self.assertEqual(len(dependencies), 25)
 
+        self.assertTrue(all(isinstance(dep, DebDependency)
+                            for dep in dependencies))
         expected = [
             {'name': 'accountsservice', 'version': '0.6.15-2ubuntu9.6'},
             {'name': 'acpid', 'version': '1:2.0.10-1ubuntu3'},
@@ -321,6 +406,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
         dependencies = list(command.collect_dependencies())
 
         self.assertEqual(len(dependencies), 25)
+        self.assertTrue(all(isinstance(dep, RPMDependency)
+                            for dep in dependencies))
 
         expected = [
             {'name': 'libaio', 'version': '0.3.1095.fc17'},
