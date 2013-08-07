@@ -1,5 +1,5 @@
 """
-Definition of package types.
+Package type name constants.
 
 There are two primary types of packages:
 

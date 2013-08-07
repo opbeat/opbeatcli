@@ -7,12 +7,12 @@ http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-f
 import requirements
 
 from opbeatcli.exceptions import DependencyParseError
-from .base import DependencyCollector, BaseDependency
+from .base import BaseDependencyCollector, BaseDependency
 from .types import PYTHON_PACKAGE
 from ..vcs import VCS
 
 
-class PythonCollector(DependencyCollector):
+class PythonCollector(BaseDependencyCollector):
 
     default_commands = [
         'pip freeze'

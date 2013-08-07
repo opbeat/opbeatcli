@@ -85,7 +85,7 @@ class BaseDependency(BasePackage):
         return package_class(**kwargs)
 
 
-class DependencyCollector(object):
+class BaseDependencyCollector(object):
 
     default_commands = []
     custom_commands = None

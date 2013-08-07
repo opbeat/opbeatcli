@@ -1,11 +1,11 @@
 import json
 
 from opbeatcli.exceptions import DependencyParseError
-from .base import BaseDependency, DependencyCollector
+from .base import BaseDependency, BaseDependencyCollector
 from .types import NODE_PACKAGE
 
 
-class NodeCollector(DependencyCollector):
+class NodeCollector(BaseDependencyCollector):
     default_commands = [
         'npm --json --global list',
         'npm --json --local list',

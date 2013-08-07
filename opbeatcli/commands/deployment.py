@@ -7,13 +7,14 @@ from itertools import chain, groupby
 
 from opbeatcli import settings
 from opbeatcli.log import logger
-from opbeatcli.exceptions import InvalidArgumentError, ExternalCommandNotFoundError
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.packages.base import BaseDependency
 from opbeatcli.deployment import serialize
 from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.deployment.packages import (DEPENDENCY_COLLECTORS,
                                            DEPENDENCIES_BY_TYPE)
+from opbeatcli.exceptions import (InvalidArgumentError,
+                                  ExternalCommandNotFoundError)
 from .base import CommandBase
 
 

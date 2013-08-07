@@ -1,9 +1,9 @@
 from opbeatcli.exceptions import DependencyParseError
-from .base import BaseDependency, DependencyCollector
+from .base import BaseDependency, BaseDependencyCollector
 from .types import DEB_PACKAGE
 
 
-class DebCollector(DependencyCollector):
+class DebCollector(BaseDependencyCollector):
 
     default_commands = [
         r"dpkg-query --show --showformat='${package} ${version}\n'"

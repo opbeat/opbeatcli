@@ -1,9 +1,9 @@
 from opbeatcli.exceptions import DependencyParseError
-from .base import BaseDependency, DependencyCollector
+from .base import BaseDependency, BaseDependencyCollector
 from .types import RPM_PACKAGE
 
 
-class RPMCollector(DependencyCollector):
+class RPMCollector(BaseDependencyCollector):
 
     default_commands = [
         r"rpm --query --all --queryformat='%{NAME} %{VERSION}%{RELEASE}\n'"

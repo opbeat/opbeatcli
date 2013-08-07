@@ -11,7 +11,7 @@ from opbeatcli.deployment.packages.rpm import RPMDependency
 from opbeatcli.deployment.packages.ruby import RubyDependency
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
-from opbeatcli.core import get_command, main
+from opbeatcli.core import get_command, main, EXIT_SUCCESS
 from opbeatcli.cli import ENV
 from opbeatcli.commands.deployment import KeyValue, PackageSpecValidator
 from opbeatcli.exceptions import (InvalidArgumentError,
@@ -124,13 +124,13 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             --dependency type:other name:now version:{now}
 
         """.format(now=now)
-        self.assertEqual(main(settings.AUTH_ARGS + args.split()), 0)
+        self.assertEqual(main(settings.AUTH_ARGS + args.split()), EXIT_SUCCESS)
 
     def test_deployment_help(self):
         # the --help action exits with 0
         with self.assertRaises(SystemExit) as cm:
             main('deployment --help'.split())
-        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(cm.exception.code, EXIT_SUCCESS)
 
     def test_deployment_dry_run(self):
         exit_status = main(
@@ -140,7 +140,7 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             deployment --collect-dependencies --component path:.
             """.split()
         )
-        self.assertEqual(exit_status, 0)
+        self.assertEqual(exit_status, EXIT_SUCCESS)
 
     def test_deployment_verbose_dry_run(self):
         exit_status = main(
@@ -150,7 +150,7 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             deployment --collect-dependencies --component path:.
             """.split()
         )
-        self.assertEqual(exit_status, 0)
+        self.assertEqual(exit_status, EXIT_SUCCESS)
 
 
 class DeploymentPackagesCLITest(BaseDeploymentCommandTestCase):

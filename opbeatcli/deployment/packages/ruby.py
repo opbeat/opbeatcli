@@ -1,7 +1,7 @@
 import re
 
 from opbeatcli.exceptions import DependencyParseError
-from .base import DependencyCollector, BaseDependency
+from .base import BaseDependencyCollector, BaseDependency
 from .types import RUBY_PACKAGE
 
 
@@ -9,7 +9,7 @@ from .types import RUBY_PACKAGE
 GEM_RE = re.compile('^[^\s]+ \([^\s]+(, [^\s]+)*\)$')
 
 
-class RubyCollector(DependencyCollector):
+class RubyCollector(BaseDependencyCollector):
 
     default_commands = [
         'gem list'
