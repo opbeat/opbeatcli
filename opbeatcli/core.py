@@ -6,7 +6,7 @@ import sys
 import logging
 
 from opbeatcli.log import logger
-from opbeatcli.cli import parser
+from opbeatcli.cli import get_parser
 from opbeatcli.exceptions import OpbeatError, ClientConnectionError
 
 
@@ -15,6 +15,7 @@ EXIT_CLIENT_ERROR, EXIT_SERVER_ERROR = 4, 5
 
 
 def get_command(args=sys.argv[1:]):
+    parser = get_parser()
     args = parser.parse_args(args)
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     Command = args.command_class

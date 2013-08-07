@@ -38,7 +38,7 @@ class OpbeatClient(object):
 
         self.logger.info('Opbeat client configuration:')
         for k in ['server', 'organization_id', 'app_id']:
-            self.logger.info('  %16s: %s' % (k, getattr(self, k)))
+            self.logger.info('  %16s: %r' % (k, str(getattr(self, k))))
 
     def post(self, uri, data):
         """
