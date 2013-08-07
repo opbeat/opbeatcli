@@ -51,27 +51,43 @@ parser.add_argument(
     action='version',
     version=__version__
 )
-parser.add_argument(
+common = parser.add_argument_group('common options')
+
+common.add_argument(
     '--verbose',
-    help='Increase output verbosity',
+    help='Increase output verbosity.',
     action='store_true'
 )
 
-common = parser.add_argument_group('common options')
+common.add_argument(
+    '--dry-run',
+    action='store_true',
+    dest='dry_run',
+    help="""
+    Don't send anything to the Opbeat API. Use --verbose to print the request.
+
+    """,
+)
 
 common.add_argument(
     '-o', '--org-id',
     required=True,
     dest='organization_id',
     default=os.environ.get('OPBEAT_ORGANIZATION_ID'),
-    help='Can be also set via the environment variable OPBEAT_ORGANIZATION_ID.',
+    help="""
+    Can be also set via the environment variable OPBEAT_ORGANIZATION_ID.
+
+    """,
 )
 common.add_argument(
     '-a', '--app-id',
-    help='Can be also set with environment variable OPBEAT_APP_ID.',
     dest='app_id',
     required=True,
-    default=os.environ.get('OPBEAT_APP_ID')
+    default=os.environ.get('OPBEAT_APP_ID'),
+    help="""
+    Can be also set with environment variable OPBEAT_APP_ID.
+
+    """,
 )
 common.add_argument(
     '-t',

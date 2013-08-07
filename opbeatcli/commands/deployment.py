@@ -303,12 +303,6 @@ Introduction:
 
         """
         subparser.add_argument(
-            '--dry-run',
-            action='store_true',
-            dest='dry_run',
-            help="Don't send anything. Use --verbose to print the request.",
-        )
-        subparser.add_argument(
             '--hostname',
             action='store',
             dest='hostname',
