@@ -1,6 +1,7 @@
 import os
 import shlex
 from operator import attrgetter
+import datetime
 
 from opbeatcli.deployment.packages.deb import DebDependency
 from opbeatcli.deployment.packages.nodejs import NodeDependency
@@ -16,6 +17,7 @@ from opbeatcli.commands.deployment import KeyValue, PackageSpecValidator
 from opbeatcli.exceptions import (InvalidArgumentError,
                                   DependencyParseError,
                                   ExternalCommandNotFoundError)
+import settings
 
 
 try:
@@ -110,8 +112,19 @@ class BaseDeploymentCommandTestCase(unittest.TestCase):
         )
 
 
-class DeploymentCommonCLITest(BaseDeploymentCommandTestCase):
+class DeploymentTest(BaseDeploymentCommandTestCase):
 
+    def test_deployment_send_data(self):
+        now = datetime.datetime.now().isoformat()
+        args = """
+        deployment
+            --collect-dependencies
+            --component path:.
+            --component path:/dummy/component name:now version:{now}
+            --dependency type:other name:now version:{now}
+
+        """
+        self.assertEqual(main(settings.AUTH_ARGS + args.split()), 0)
 
     def test_deployment_help(self):
         # the --help action exits with 0
