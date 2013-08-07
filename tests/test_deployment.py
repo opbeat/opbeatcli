@@ -301,7 +301,6 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             {'name': 'opbeatcli-dev', 'vcs': {
                 'vcs_type': 'git',
                 'remote_url': 'git@github.com:opbeat/opbeatcli.git',
-                'rev': 'a680b6174067cedbac241930f291fddc1ea9d87b'
             }},
         ]
 
