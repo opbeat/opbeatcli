@@ -1,50 +1,102 @@
-``opbeatcli``
-#############
+##########
+Opbeat CLI
+##########
 
-``opbeatcli`` includes the ``opbeat`` command line client for
-`Opbeat <https://opbeat.com/>`_. It provides access to the Opbeat API through
-the command line.
+Command line tools for `Opbeat <https://opbeat.com/>`_.
 
 
 .. image:: https://secure.travis-ci.org/opbeat/opbeatcli.png?branch=master
    :target: http://travis-ci.org/opbeat/opbeatcli
 
 
-Commands
-========
+Installation
+============
 
-``opbeat`` allows you to run different commands. For most commands you need to
-be authenticated with Opbeat. The following arguments are valid for all
-commands:
-
-``-s SERVER, --server SERVER``:
-    Override server. Can be set with environment variable ``OPBEAT_SERVER``.
-
-``-o ORGANIZATION_ID, --org-id ORGANIZATION_ID``:
-    Set organization id. Can be set with environment variable
-    ``OPBEAT_ORGANIZATION_ID``.
-
-``-a APP_ID, --app-id APP_ID``:
-    Set app id. Can be set with environment variable ``OPBEAT_APP_ID``.
-
-``-t ACCESS_TOKEN, --access-token ACCESS_TOKEN``:
-    Set access token. Can be set with environment variable
-    ``OPBEAT_ACCESS_TOKEN``.
-``--verbose``:
-    Increase output verbosity
-
-
-``$ opbeat deployment``
------------------------
+Make sure you have Git and a supported version Python installed on your system.
+The supported Python versions are: ``2.6.x``, ``2.7.x``, ``3.3+`` and PyPy.
 
 .. code-block:: bash
 
-    $ opbeat [OPTIONS] deployment
+    $ python --version
 
-Notifies Opbeat about version of installed software. By default, it will
-collect all available python modules.
 
-It will also check if the current working directory (override with ``-d``) is a
-Subversion, Git or Mercurial repository. If this is the case, the most recent
-revision/commit hash is sent, as module ``MODULE_NAME``. Default module name is
-the last part of ``DIRECTORY``.
+Opbeat CLI can then be installed using the standard Python package installation
+method:
+
+.. code-block:: bash
+
+    $ pip install opbeatcli
+
+If ``pip`` is not available, you can alternatively use ``easy_install``:
+
+.. code-block:: bash
+
+    $ easy_install opbeatcli
+
+To verify successful installation of Opbeat CLI:
+
+.. code-block:: bash
+
+    $ opbeat --version
+
+
+Usage
+=====
+
+.. code-block:: bash
+
+    $ opbeat [common options] sub-command [sub-command options]
+
+
+Common Options
+--------------
+
+These options are shared by all sub-commands.
+
+To obtain these, please go to your app settings on opbeat.com:
+
+======================   ======================================================
+``--org-id, -o``         Organization ID
+``--app-id, -a``         Application ID.
+``--secret-token, -t``   Secret API authentication token.
+======================   ======================================================
+
+
+For more information and a complete list of the available common options,
+please see the command help:
+
+.. code-block:: bash
+
+    $ opbeat --help
+
+
+Sub-Commands
+------------
+
+
+``deployment``
+~~~~~~~~~~~~~~
+
+This command registers a deployment of an application to a machine with
+the Opbeat API. Deployment tracking enables advanced features of the
+Opbeat platform, such as version history and the ability to relate errors
+with particular deployments, etc. It is meant to be run from the machine
+that is being deployed to:
+
+.. code-block:: bash
+
+    # A basic deployment registration: Run this from your application
+    # repository directory on the machine which it's been deployed to:
+    $ opbeat -o ORGANISATION_ID -a APP_ID -t SECRET_TOKEN deployment \
+        --collect-dependencies --component path:.
+
+For more information and examples please see
+`deployment tracking documentation <https://opbeat.com/docs/deployment_standard/>`_
+and the command help:
+
+.. code-block:: bash
+
+    $ opbeat deployment --help
+
+
+

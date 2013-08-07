@@ -6,6 +6,7 @@ Command-specific options are defined by each command.
 
 """
 import os
+#noinspection PyCompatibility
 import argparse
 from textwrap import dedent
 
@@ -33,10 +34,10 @@ class OpbeatHelpFormatter(argparse.RawDescriptionHelpFormatter):
         return text.splitlines()
 
     def format_help(self):
-        help = super(OpbeatHelpFormatter, self).format_help()
-        if help:
-            help += '\n'
-        return help
+        text = super(OpbeatHelpFormatter, self).format_help()
+        if text:
+            text += '\n'
+        return text
 
 parser = argparse.ArgumentParser(
     description='Interact with Opbeat',

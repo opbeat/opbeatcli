@@ -1,3 +1,4 @@
+from opbeatcli.exceptions import DependencyParseError
 from .base import BaseDependency, DependencyCollector
 from .types import RPM_PACKAGE
 
@@ -10,7 +11,10 @@ class RPMCollector(DependencyCollector):
 
     def parse(self, output):
         for line in output.splitlines():
-            name, version = line.split()
+            try:
+                name, version = line.split()
+            except ValueError:
+                raise DependencyParseError(line)
             yield RPMDependency(name=name, version=version)
 
 

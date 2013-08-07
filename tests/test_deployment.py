@@ -1,9 +1,9 @@
-from operator import attrgetter
 import os
 import shlex
+from operator import attrgetter
 
 from opbeatcli.deployment.packages.other import OtherDependency
-from opbeatcli.exceptions import InvalidArgumentError
+from opbeatcli.exceptions import InvalidArgumentError, DependencyParseError
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
 from opbeatcli.core import get_command
@@ -16,6 +16,7 @@ except ImportError:
 
 
 class TestPackageSpecArgParsingAndValidation(unittest.TestCase):
+    """Low-level tests for package argument parsing."""
 
     def test_key_value_pair_parsing(self):
         invalid = [
@@ -42,16 +43,12 @@ class TestPackageSpecArgParsingAndValidation(unittest.TestCase):
                 validate(pairs)
 
 
-class BaseDeploymentTestCase(unittest.TestCase):
+class BaseDeploymentCommandTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.PATH = os.path.dirname(__file__)
         cls.DIR_NAME = os.path.basename(cls.PATH)
-
-        cls.PARENT_PATH = os.path.dirname(cls.PATH)
-        cls.PARENT_DIR_NAME = os.path.basename(cls.PARENT_PATH)
-
         os.chdir(cls.PATH)
 
     def get_command(self, cmdline):
@@ -76,10 +73,38 @@ class BaseDeploymentTestCase(unittest.TestCase):
         )
 
 
+class DeploymentPackagesCLI(BaseDeploymentCommandTestCase):
+    """Test --component and --dependency parsing."""
 
-class DeploymentPackagesCLI(BaseDeploymentTestCase):
+    def test_component_from_legacy_directory_arg(self):
+        command = self.get_command('-d .')
+        packages = command.get_packages_from_args()
+        self.assertEqual(len(packages), 1)
+        package = packages[0]
+        self.assertIsInstance(package, Component)
+        self.assert_package_attributes(package, {
+            'path': self.PATH,
+            'name': self.DIR_NAME,
+            'vcs': {
+                'vcs_type': 'git'
+            }
+        })
 
-    def test_component_all_attributes(self):
+    def test_component_from_legacy_directory_and_module_args(self):
+        command = self.get_command('-d . -m NAME')
+        packages = command.get_packages_from_args()
+        self.assertEqual(len(packages), 1)
+        package = packages[0]
+        self.assertIsInstance(package, Component)
+        self.assert_package_attributes(package, {
+            'path': self.PATH,
+            'name': 'NAME',
+            'vcs': {
+                'vcs_type': 'git'
+            }
+        })
+
+    def test_component_arg_all_attributes(self):
         command = self.get_command(
             '--component path:/PATH name:NAME version:VERSION'
             ' vcs:git rev:REV branch:BRANCH remote_url:REMOTE'
@@ -100,7 +125,7 @@ class DeploymentPackagesCLI(BaseDeploymentTestCase):
             }
         })
 
-    def test_component_name_optional(self):
+    def test_component_arg_name_optional(self):
         command = self.get_command('--component path:/PATH version:VERSION')
         packages = command.get_packages_from_args()
         self.assertEqual(len(packages), 1)
@@ -108,7 +133,7 @@ class DeploymentPackagesCLI(BaseDeploymentTestCase):
         self.assertIsInstance(package, Component)
         self.assertEqual(package.name, 'PATH')
 
-    def test_component_from_local_vcs(self):
+    def test_component_arg_from_local_vcs(self):
         command = self.get_command('--component path:.')
         packages = command.get_packages_from_args()
         self.assertEqual(len(packages), 1)
@@ -123,17 +148,17 @@ class DeploymentPackagesCLI(BaseDeploymentTestCase):
             }
         })
 
-    def test_component_version_or_rev_required(self):
+    def test_component_arg_version_or_rev_required(self):
         command = self.get_command('--component path:/PATH')
         with self.assertRaises(InvalidArgumentError):
             command.get_packages_from_args()
 
-    def test_component_path_required(self):
+    def test_component_arg_path_required(self):
         command = self.get_command('--component name:NAME version:VERSION')
         with self.assertRaises(InvalidArgumentError):
             command.get_packages_from_args()
 
-    def test_dependency_all_attributes(self):
+    def test_dependency_arg_all_attributes(self):
         command = self.get_command(
             '--dependency type:other name:NAME version:VERSION'
             ' vcs:git rev:REV branch:BRANCH remote_url:REMOTE'
@@ -153,23 +178,24 @@ class DeploymentPackagesCLI(BaseDeploymentTestCase):
             }
         })
 
-    def test_dependency_version_or_rev_required(self):
+    def test_dependency_arg_version_or_rev_required(self):
         command = self.get_command('--dependency type:other name:NAME')
         with self.assertRaises(InvalidArgumentError):
             command.get_packages_from_args()
 
-    def test_dependency_type_required(self):
+    def test_dependency_arg_type_required(self):
         command = self.get_command('--dependency name:NAME version:VERSION')
         with self.assertRaises(InvalidArgumentError):
             command.get_packages_from_args()
 
-    def test_dependency_name_required(self):
+    def test_dependency_arg_name_required(self):
         command = self.get_command('--dependency type:other version:VERSION')
         with self.assertRaises(InvalidArgumentError):
             command.get_packages_from_args()
 
 
-class TestDependencyCollection(BaseDeploymentTestCase):
+class TestDependencyCollection(BaseDeploymentCommandTestCase):
+    """Test automatic dependency collection with valid and invalid output."""
 
     def test_collect_all_dependencies(self):
         list(self.get_command('--collect-dependencies')
@@ -205,6 +231,13 @@ class TestDependencyCollection(BaseDeploymentTestCase):
         for dependency, attrs in zip(dependencies, expected):
             self.assert_package_attributes(dependency, attrs)
 
+    def test_collect_python_parse_error(self):
+        command = self.get_command(
+            '--collect-dependencies python:"echo invalid-requirement="'
+        )
+        with self.assertRaises(DependencyParseError):
+            list(command.collect_dependencies())
+
     def test_collect_nodejs(self):
         command = self.get_command(
             '--collect-dependencies nodejs:"cat fixtures/npm_list.json"'
@@ -226,6 +259,13 @@ class TestDependencyCollection(BaseDeploymentTestCase):
         for dependency, attrs in zip(dependencies, expected):
             self.assert_package_attributes(dependency, attrs)
 
+    def test_collect_nodejs_parse_error(self):
+        command = self.get_command(
+            '--collect-dependencies nodejs:"echo invalid-json"'
+        )
+        with self.assertRaises(DependencyParseError):
+            list(command.collect_dependencies())
+
     def test_collect_ruby(self):
         command = self.get_command(
             '--collect-dependencies ruby:"cat fixtures/gem_list.txt"'
@@ -244,6 +284,13 @@ class TestDependencyCollection(BaseDeploymentTestCase):
         for dependency, attrs in zip(dependencies, expected):
             self.assert_package_attributes(dependency, attrs)
 
+    def test_collect_ruby_parse_error(self):
+        command = self.get_command(
+            '--collect-dependencies ruby:"echo invalid-gem-spec-no-versions"'
+        )
+        with self.assertRaises(DependencyParseError):
+            list(command.collect_dependencies())
+
     def test_collect_deb(self):
         command = self.get_command(
             '--collect-dependencies deb:"cat fixtures/dpkg_query.txt"'
@@ -260,6 +307,13 @@ class TestDependencyCollection(BaseDeploymentTestCase):
         for dependency, attrs in zip(dependencies, expected):
             self.assert_package_attributes(dependency, attrs)
 
+    def test_collect_deb_parse_error(self):
+        command = self.get_command(
+            '--collect-dependencies deb:"echo invalid-deb-package-no-version"'
+        )
+        with self.assertRaises(DependencyParseError):
+            list(command.collect_dependencies())
+
     def test_collect_rpm(self):
         command = self.get_command(
             '--collect-dependencies rpm:"cat fixtures/rpm_query.txt"'
@@ -275,6 +329,13 @@ class TestDependencyCollection(BaseDeploymentTestCase):
 
         for dependency, attrs in zip(dependencies, expected):
             self.assert_package_attributes(dependency, attrs)
+
+    def test_collect_rpm_parse_error(self):
+        command = self.get_command(
+            '--collect-dependencies rpm:"echo invalid-rpm-package-no-version"'
+        )
+        with self.assertRaises(DependencyParseError):
+            list(command.collect_dependencies())
 
 
 class TestSSHAliasExpansion(unittest.TestCase):

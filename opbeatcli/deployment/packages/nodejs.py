@@ -1,5 +1,6 @@
 import json
 
+from opbeatcli.exceptions import DependencyParseError
 from .base import BaseDependency, DependencyCollector
 from .types import NODE_PACKAGE
 
@@ -11,7 +12,11 @@ class NodeCollector(DependencyCollector):
     ]
 
     def parse(self, output):
-        data = json.loads(output)
+        try:
+            data = json.loads(output)
+        except ValueError as e:
+            raise DependencyParseError(str(e))
+
         for name, dep_data in data.get('dependencies', {}).items():
             yield NodeDependency(name=name, version=dep_data['version'])
 

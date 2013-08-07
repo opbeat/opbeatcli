@@ -6,6 +6,7 @@ http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-f
 """
 import requirements
 
+from opbeatcli.exceptions import DependencyParseError
 from .base import DependencyCollector, BaseDependency
 from .types import PYTHON_PACKAGE
 from ..vcs import VCS
@@ -18,7 +19,12 @@ class PythonCollector(DependencyCollector):
     ]
 
     def parse(self, output):
-        for req in requirements.parse(output):
+        try:
+            reqs = list(requirements.parse(output))
+        except ValueError as e:
+            raise DependencyParseError(str(e))
+
+        for req in reqs:
             # {'extras': [], 'name': 'redis', 'specs': [('==', '2.6.2')]}
             try:
                 version = req['specs'][0][1]

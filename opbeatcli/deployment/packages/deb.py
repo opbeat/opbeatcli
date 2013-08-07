@@ -1,3 +1,4 @@
+from opbeatcli.exceptions import DependencyParseError
 from .base import BaseDependency, DependencyCollector
 from .types import DEB_PACKAGE
 
@@ -10,7 +11,11 @@ class DebCollector(DependencyCollector):
 
     def parse(self, output):
         for line in output.splitlines():
-            name, version = line.split()
+            try:
+                name, version = line.split()
+            except ValueError:
+                raise DependencyParseError(line)
+
             yield DebDependency(name=name, version=version)
 
 

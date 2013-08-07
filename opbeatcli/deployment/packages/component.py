@@ -17,6 +17,16 @@ class Component(BasePackage):
         self.path = path
         super(Component, self).__init__(*args, **kwargs)
 
+    def __repr__(self):
+        return (
+            '{cls}(path={path!r}, name={name!r},'
+            ' version={version!r}, vcs={vcs!r})'
+            .format(
+                cls=type(self).__name__,
+                **self.__dict__
+            )
+        )
+
     @classmethod
     def spec_to_kwargs(cls, spec):
         # Component specs have a path which can be used to fill in name

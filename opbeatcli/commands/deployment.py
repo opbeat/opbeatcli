@@ -7,7 +7,7 @@ from itertools import chain, groupby
 
 from opbeatcli import settings
 from opbeatcli.log import logger
-from opbeatcli.exceptions import InvalidArgumentError, CommandNotFoundError
+from opbeatcli.exceptions import InvalidArgumentError, ExternalCommandNotFoundError
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.packages.base import BaseDependency
 from opbeatcli.deployment import serialize
@@ -164,7 +164,7 @@ def collect_dependencies(type_command_args, ignore_no_command):
         try:
             for dep in collector.collect():
                 yield dep
-        except CommandNotFoundError:
+        except ExternalCommandNotFoundError:
             if not ignore_no_command:
                 # We can ignore this error unless the user explicitely asked
                 # for this type (and also possibly supplied a custom command).
@@ -174,18 +174,19 @@ def collect_dependencies(type_command_args, ignore_no_command):
 class DeploymentCommand(CommandBase):
 
     def run(self):
-
+        self.logger.debug('Registering deployment')
         try:
-
-            data = serialize.deployment(
-                local_hostname=self.args.hostname,
-                packages=self.get_all_packages(),
-            )
-
+            data = self.get_data()
         except InvalidArgumentError as e:
             self.parser.error(e.message)
         else:
             self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
+
+    def get_data(self):
+        return serialize.deployment(
+            local_hostname=self.args.hostname,
+            packages=self.get_all_packages(),
+        )
 
     def get_all_packages(self):
         return chain(
@@ -196,11 +197,15 @@ class DeploymentCommand(CommandBase):
     def collect_dependencies(self):
         if self.args.collect_deps is None:
             return []
-
         type_command_args = self.args.collect_deps or [
             KeyOptionalValue.from_string(type_)
             for type_ in DEPENDENCY_COLLECTORS.keys()
         ]
+
+        self.logger.debug(
+            'Starting dependency collection for %s',
+            ', '.join(sorted(dict(type_command_args).keys()))
+        )
 
         return collect_dependencies(
             type_command_args,
@@ -247,6 +252,14 @@ class DeploymentCommand(CommandBase):
             BaseDependency.from_spec(args_to_dependency_spec(attributes))
             for attributes in dependencies
         ]
+
+        self.logger.debug('Components from arguments: %d', len(components))
+        for package in components:
+            self.logger.debug('  %r', package)
+
+        self.logger.debug('Dependencies from arguments: %d', len(dependencies))
+        for package in dependencies:
+            self.logger.debug('  %r', package)
 
         return components + dependencies
 

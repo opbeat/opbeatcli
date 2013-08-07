@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 from subprocess import Popen, PIPE
 
-from opbeatcli.exceptions import InvalidArgumentError
+from opbeatcli.exceptions import InvalidArgumentError, DependencyParseError
 from opbeatcli.log import logger
-from opbeatcli.exceptions import CommandError, CommandNotFoundError
+from opbeatcli.exceptions import ExternalCommandError, ExternalCommandNotFoundError
 from ..vcs import VCS
 from .types import PACKAGE_TYPES
 
@@ -26,11 +26,8 @@ class BasePackage(object):
 
     def __repr__(self):
         return (
-            '{cls}(name={name!r}, version={version!r})'
-            .format(
-                cls=type(self).__name__,
-                **self.__dict__
-            )
+            '{cls}(name={name!r}, version={version!r}, vcs={vcs!r})'
+            .format(cls=type(self).__name__, **self.__dict__)
         )
 
     @classmethod
@@ -93,35 +90,75 @@ class DependencyCollector(object):
     default_commands = []
     custom_commands = None
 
-    def __init__(self, custom_commands=None):
-        self.custom_commands = custom_commands
+    def __init__(self, custom_commands=None, ignore_missing=False):
         self.logger = logger.getChild(type(self).__name__)
+        self.custom_commands = custom_commands
+        self.ignore_missing = ignore_missing
 
     def run_command(self, command):
         COMMAND_NOT_FOUND = 127
-        self.logger.debug('collecting dependencies using command: %r', command)
-        process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-        out, err = process.communicate()
-        ret = process.poll()
 
-        if ret:
-            self.logger.debug('=> exit status: %s', ret)
-            self.logger.debug('=> stderr: %s', err)
-            if ret == COMMAND_NOT_FOUND:
-                raise CommandNotFoundError(err)
-            raise CommandError(err)
+        self.logger.debug('Executing command: %r', command)
+
+        process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        stdout, stderr = process.communicate()
+        exit_status = process.poll()
+
+        stderr = stderr.strip().decode()
+        stdout = stdout.strip().decode()
+
+        self.logger.debug('  exit status: %s', exit_status)
+
+        if stderr:
+            self.logger.debug('  stderr: %s', stderr)
+
+        if stdout:
+            self.logger.debug('  stdout: \n    %s',
+                              '\n    '.join(stdout.splitlines()))
+
+        if exit_status:
+            msg = (
+                '{name} could not collect dependencies using the command:'
+                ' {command!r}. Exit status: {exit_status}. Error message:'
+                ' {stderr!r}.'
+                .format(
+                    name=type(self).__name__,
+                    command=command,
+                    exit_status=exit_status,
+                    stderr=stderr,
+                )
+            )
+            if exit_status == COMMAND_NOT_FOUND:
+                raise ExternalCommandNotFoundError(msg)
+            raise ExternalCommandError(msg)
 
         # FIXME: might be another encoding.
-        return out.strip().decode('utf8')
+        return stdout
 
     def parse(self, output):
-        """Parse command ``output`` nad return a ``list`` of dependencies."""
+        """Parse command ``output`` and yield dependencies.
+
+        :raises: ParseError if the output cannot be parsed.
+
+        """
         return []
 
     def collect(self):
         """Return a list of dependencies."""
         commands = self.custom_commands or self.default_commands
         for command in commands:
-            for dep in self.parse(self.run_command(command)):
-                self.logger.debug('=> %r', dep)
-                yield dep
+            output = self.run_command(command)
+            try:
+                for dependency in self.parse(output):
+                    self.logger.debug('  %r', dependency)
+                    yield dependency
+            except DependencyParseError as e:
+                raise DependencyParseError(
+                    '{name}: command output ({command!r}) could'
+                    ' not be parsed: {message!r}'
+                    .format(
+                        name=type(self).__name__,
+                        command=command,
+                        message=str(e)
+                    )
+                )

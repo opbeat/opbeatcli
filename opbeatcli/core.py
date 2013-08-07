@@ -40,7 +40,9 @@ def main(args=sys.argv[1:]):
         else:
             return EXIT_SERVER_ERROR
     except OpbeatError as e:
-        logger.error(e.message)
+        logger.error(e)
+        if not command.args.verbose:
+            logger.error('Run again with --verbose to see more details.')
         return EXIT_ERROR
     except Exception:
         logger.exception('Error executing command')

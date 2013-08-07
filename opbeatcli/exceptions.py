@@ -1,3 +1,4 @@
+#noinspection PyCompatibility
 import argparse
 
 
@@ -25,9 +26,13 @@ class ClientHTTPError(ClientConnectionError):
     """Raised when response status >= 400."""
 
 
-class CommandError(OpbeatError):
+class ExternalCommandError(OpbeatError):
     """Error running an external command."""
 
 
-class CommandNotFoundError(CommandError):
+class ExternalCommandNotFoundError(ExternalCommandError):
     """Dependency collector command not found."""
+
+
+class DependencyParseError(ExternalCommandError):
+    """Unparseable output."""
