@@ -91,7 +91,6 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
         now = datetime.datetime.now().isoformat()
         args = """
         deployment
-            --collect-dependencies
             --component path:.
             --component path:/dummy/component name:now version:{now}
             --dependency type:other name:now version:{now}
@@ -110,7 +109,7 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             """
             -o O -a A -t T
             --dry-run
-            deployment --collect-dependencies --component path:.
+            deployment --component path:.
             """.split()
         )
         self.assertEqual(exit_status, EXIT_SUCCESS)
@@ -120,7 +119,7 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             """
             -o O -a A -t T
             --verbose --dry-run
-            deployment --collect-dependencies --component path:.
+            deployment --component path:.
             """.split()
         )
         self.assertEqual(exit_status, EXIT_SUCCESS)
@@ -272,15 +271,62 @@ class DeploymentPackagesCLITest(BaseDeploymentCommandTestCase):
 class TestDependencyCollection(BaseDeploymentCommandTestCase):
     """Test automatic dependency collection with valid and invalid output."""
 
-    def test_collect_all_dependencies(self):
-        list(self.get_deployment_command('--collect-dependencies')
-                 .get_all_packages())
-
     def test_collect_dependencies_duplicate_type(self):
         with self.assertRaises(InvalidArgumentError):
-            list(self.get_deployment_command(
-                '--collect-dependencies python python')
-            .get_all_packages())
+            list(
+                self.get_deployment_command(
+                    '--collect-dependencies python python'
+                ).get_all_packages()
+            )
+
+    def test_auto_collect_dependencies(self):
+        self.assertGreater(len(list(
+            self.get_deployment_command('')
+                .get_all_packages()
+        )), 1)
+
+    def test_auto_collect_dependencies_overwrite_type(self):
+        packages = list(
+            self.get_deployment_command("""
+                --collect-dependencies
+                    python:'echo NAME==VERSION'
+            """).get_all_packages()
+        )
+        python_deps = [
+            package for package in packages
+            if isinstance(package, PythonDependency)
+        ]
+
+        self.assertEqual(len(python_deps), 1)
+        self.assert_package_attributes(python_deps[0], {
+            'name': 'NAME',
+            'version': 'VERSION',
+        })
+
+    def test_auto_collect_dependencies_extend_type(self):
+
+        package_count = sum(
+            1 for package in self.get_deployment_command('').get_all_packages()
+            if isinstance(package, PythonDependency)
+        )
+        package_count_extended = sum(
+            1 for package in self.get_deployment_command("""
+                --collect-dependencies
+                    python
+                    python:'echo NAME==VERSION'
+            """).get_all_packages()
+            if isinstance(package, PythonDependency)
+        )
+
+        self.assertEqual(package_count_extended - package_count, 1)
+
+
+    def test_no_auto_collect_dependencies(self):
+        packages = list(
+            self.get_deployment_command('--no-auto-collect-dependencies')
+                .get_all_packages()
+        )
+        self.assertEqual(len(packages), 0)
 
     def test_collect_dependencies_command_for_explicit_type_not_found(self):
         """
@@ -303,9 +349,10 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
         )
 
     def test_collect_python(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies python:"cat fixtures/pip_freeze.txt"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies python:"cat fixtures/pip_freeze.txt"
+        """)
         dependencies = list(command.collect_dependencies())
         self.assertEqual(len(dependencies), 8)
         self.assertTrue(all(isinstance(dep, PythonDependency)
@@ -329,9 +376,10 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             list(command.collect_dependencies())
 
     def test_collect_nodejs(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies nodejs:"cat fixtures/npm_list.json"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies nodejs:"cat fixtures/npm_list.json"
+        """)
         dependencies = list(command.collect_dependencies())
 
         self.assertEqual(len(dependencies), 5)
@@ -359,9 +407,11 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             list(command.collect_dependencies())
 
     def test_collect_ruby(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies ruby:"cat fixtures/gem_list.txt"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies
+                ruby:'cat fixtures/gem_list.txt'
+        """)
         dependencies = list(command.collect_dependencies())
 
         self.assertEqual(len(dependencies), 36)
@@ -386,9 +436,11 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             list(command.collect_dependencies())
 
     def test_collect_deb(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies deb:"cat fixtures/dpkg_query.txt"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies
+                deb:'cat fixtures/dpkg_query.txt'
+        """)
         dependencies = list(command.collect_dependencies())
 
         self.assertEqual(len(dependencies), 25)
@@ -404,16 +456,20 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             self.assert_package_attributes(dependency, attrs)
 
     def test_collect_deb_parse_error(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies deb:"echo invalid-deb-package-no-version"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies
+                deb:'echo invalid-deb-package-no-version'
+        """)
         with self.assertRaises(DependencyParseError):
             list(command.collect_dependencies())
 
     def test_collect_rpm(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies rpm:"cat fixtures/rpm_query.txt"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies
+                rpm:'cat fixtures/rpm_query.txt'
+        """)
         dependencies = list(command.collect_dependencies())
 
         self.assertEqual(len(dependencies), 25)
@@ -429,9 +485,11 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             self.assert_package_attributes(dependency, attrs)
 
     def test_collect_rpm_parse_error(self):
-        command = self.get_deployment_command(
-            '--collect-dependencies rpm:"echo invalid-rpm-package-no-version"'
-        )
+        command = self.get_deployment_command("""
+            --no-auto-collect-dependencies
+            --collect-dependencies
+                rpm:'echo invalid-rpm-package-no-version'
+        """)
         with self.assertRaises(DependencyParseError):
             list(command.collect_dependencies())
 
@@ -446,6 +504,8 @@ class DeploymentAPIVersion1SerializationTest(BaseDeploymentCommandTestCase):
             --component path:/PATH name:COMPONENT1 version:1.0
             --component path:/PATH name:COMPONENT2 version:VERSION vcs:git
                         branch:BRANCH rev:REV remote_url:REMOTE_URL
+
+            --no-auto-collect-dependencies
 
             --dependency type:other name:DEPENDENCY1 version:VERSION
             --dependency name:DEPENDENCY2 type:other version:VERSION vcs:git

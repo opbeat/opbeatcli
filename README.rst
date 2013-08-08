@@ -87,8 +87,8 @@ that is being deployed to:
 
     # A basic deployment registration: Run this from your application
     # repository directory on the machine which it's been deployed to:
-    $ opbeat -o ORGANISATION_ID -a APP_ID -t SECRET_TOKEN deployment \
-        --collect-dependencies --component path:.
+    $ opbeat -o ORGANISATION_ID -a APP_ID -t SECRET_TOKEN \
+        deployment --component path:.
 
 For more information and examples please see
 `deployment tracking documentation <https://opbeat.com/docs/deployment_standard/>`_

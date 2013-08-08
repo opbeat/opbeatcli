@@ -130,48 +130,6 @@ args_to_dependency_spec = PackageSpecValidator(
 )
 
 
-def collect_dependencies(type_command_args, ignore_no_command):
-
-    get_type = attrgetter('key')
-    get_command = attrgetter('value')
-
-    groups = groupby(sorted(type_command_args, key=get_type), key=get_type)
-
-    for dep_type, type_command_args in groups:
-
-        try:
-            collector_class = DEPENDENCY_COLLECTORS[dep_type]
-        except KeyError:
-            raise InvalidArgumentError(
-                'Unknown dependency type to collect: %r' % dep_type
-            )
-
-        custom_commands = list(map(get_command, type_command_args))
-
-        if len(custom_commands) != len(set(custom_commands)):
-            raise InvalidArgumentError(
-                'Duplicate dependency type: %s' % dep_type
-            )
-
-        commands = []
-        for custom_command in custom_commands:
-            if custom_command is None:
-                commands.extend(collector_class.default_commands)
-            else:
-                commands.append(custom_command)
-
-        collector = collector_class(custom_commands=commands)
-
-        try:
-            for dep in collector.collect():
-                yield dep
-        except ExternalCommandNotFoundError:
-            if not ignore_no_command:
-                # We can ignore this error unless the user explicitely asked
-                # for this type (and also possibly supplied a custom command).
-                raise
-
-
 class DeploymentCommand(CommandBase):
 
     def run(self):
@@ -207,22 +165,60 @@ class DeploymentCommand(CommandBase):
         )
 
     def collect_dependencies(self):
-        if self.args.collect_deps is None:
-            return []
-        type_command_args = self.args.collect_deps or [
-            KeyOptionalValue.from_string(type_)
-            for type_ in DEPENDENCY_COLLECTORS.keys()
-        ]
 
-        self.logger.debug(
-            'Starting dependency collection for %s',
-            ', '.join(sorted(dict(type_command_args).keys()))
-        )
+        if not self.args.do_auto_collect and not self.args.collect:
+            self.logger.debug('Not collecting dependencies.')
 
-        return collect_dependencies(
-            type_command_args,
-            ignore_no_command=not self.args.collect_deps,
-        )
+        auto_collect = (DEPENDENCY_COLLECTORS.copy()
+                        if self.args.do_auto_collect else {})
+
+        if self.args.collect:
+            # This is how
+            # "--collect-dependencies python:py_custom ruby:rb_custom python"
+            # => {python: [py_custom, <py default cmds>],
+            #     ruby: [rb_custom] }
+
+            get_type = attrgetter('key')
+            get_command = attrgetter('value')
+            # Group by type so that we can instantiate one collector per type:
+            groups = groupby(sorted(self.args.collect, key=get_type),
+                             key=get_type)
+            for dep_type, group in groups:
+
+                if dep_type in auto_collect:
+                    del auto_collect[dep_type]
+
+                try:
+                    collector_class = DEPENDENCY_COLLECTORS[dep_type]
+                except KeyError:
+                    raise InvalidArgumentError(
+                        'Unknown dependency type to collect: %r' % dep_type)
+                custom_commands = list(map(get_command, group))
+                if len(custom_commands) != len(set(custom_commands)):
+                    raise InvalidArgumentError(
+                        'Duplicate dependency type: %s' % dep_type)
+                commands = []
+                for custom_command in custom_commands:
+                    if custom_command is None:
+                        # eg. 'python' => add all default commands for type
+                        commands.extend(collector_class.default_commands)
+                    else:
+                        # eg. 'python:custom_command'
+                        commands.append(custom_command)
+                collector = collector_class(custom_commands=commands)
+                for dep in collector.collect():
+                    yield dep
+
+        if auto_collect:
+            self.logger.debug('Auto-collecting dependencies: %s',
+                              ', '.join(sorted(auto_collect.keys())))
+            for collector_class in auto_collect.values():
+                collector = collector_class()
+                try:
+                    for dep in collector.collect():
+                        yield dep
+                except ExternalCommandNotFoundError:
+                    pass
 
     def get_packages_from_args(self):
         """
@@ -406,57 +402,26 @@ Introduction:
                 dependency_types='|'.join(sorted(DEPENDENCIES_BY_TYPE.keys()))
             ),
         )
-
         subparser.add_argument(
-            '--collect-dependencies',
-            nargs=argparse.ZERO_OR_MORE,
-            metavar='type[:command]',
-            dest='collect_deps',
-            type=KeyOptionalValue.from_string,
-            help=r"""
-            Enable automatic collection of installed dependencies.
-            With no arguments, all the predefined dependency types will be
-            attempted to collect. You can also choose to collect only some
-            types of dependencies. The available types are:
+            '--auto-collect-dependencies',
+            default=True,
+            dest='do_auto_collect',
+            action='store_true',
+            help="""
+            (Re-)enable automatic collection of installed dependencies (on by
+            default). These types of dependencies are attempted to be
+            collected:
 
                 {types}
 
-            Examples:
-
-                --collect-dependencies
-                --collect-dependencies python ruby
-
             For each type, there is one or more default shell commands which
-            are run to collect the dependencies:
+            are run to collect information about the dependencies:
 
 {default_commands}
 
-            You can also supply one or more custom commands for each type as
-            long as the output uses the same format as the default commands do:
-
-            Collect only node.js dependencies using a custom command in
-            addition to the default ones:
-
-                --collect-dependencies \
-                    nodejs \
-                    nodejs:'cd /webapp2 && npm --local --json list' \
-
-            Use only a custom collection command:
-
-                --collect-dependencies \
-                    python:'/my-virtualenv/bin/pip freeze'
-
-            Default commands for some types, custom commands for others:
-
-                --collect-dependencies \
-                    python \
-                    deb \
-                    nodejs:'cd /www/webapp && npm --local --json list' \
-                    ruby:'bin/script
-
             """
             .format(
-                types=' '.join(sorted(DEPENDENCY_COLLECTORS.keys())),
+                types=', '.join(sorted(DEPENDENCY_COLLECTORS.keys())),
                 default_commands=''.join(sorted(
                     "{type: >23}: {commands}\n"
                     .format(
@@ -468,6 +433,64 @@ Introduction:
                     for dep_type, collector in DEPENDENCY_COLLECTORS.items()
                 ))
             )
+        )
+        subparser.add_argument(
+            '--no-auto-collect-dependencies',
+            dest='do_auto_collect',
+            action='store_false',
+            help="""
+            Disable automatic collection of dependencies (which is enabled by
+            default).
+
+            """
+        )
+
+        subparser.add_argument(
+            '--collect-dependencies',
+            nargs=argparse.ONE_OR_MORE,
+            metavar='type[:command]',
+            dest='collect',
+            type=KeyOptionalValue.from_string,
+            help=r"""
+
+            Specify dependency collection that should be used in addition to,
+            or instead of the automatic one.
+
+            (See --auto-collect-dependencies for supported dependency
+            collection types and their default commands.)
+
+            You can supply one or more custom commands for each type
+            ("type:command"). The output of the custom commands needs to use
+            the same format as the corresponding default commands do. If only
+            a type is specified ("type"), default commands for the type will
+            be used.
+
+            Examples:
+
+            Overwrite automatic node.js dependency collection with a custom
+            command:
+
+                --collect-dependencies \
+                    nodejs:'cd /webapp1 && npm --local --json list' \
+
+            Add a custom Python dependency collection command but also call
+            the default one:
+
+                --collect-dependencies \
+                    python:'venv/bin/pip freeze' \
+                    python
+
+            Disable automatic collection and use only the listed types and
+            commands:
+
+                --no-auto-collect-dependencies --collect-dependencies \
+                    deb \
+                    nodejs \
+                    python \
+                    python:'virtualenv/bin/pip freeze' \
+                    ruby:bin/script
+
+            """
         )
 
         # Hidden aliases for --component to preserve
@@ -489,19 +512,17 @@ Examples:
     Single-component app in the current directory that is a VCS checkout,
     and default dependencies collection:
 
-        $ opbeat deployment --collect-dependencies --component path:.
+        $ opbeat deployment --component path:.
 
     Multiple components as VCS checkouts:
 
         $ opbeat deployment \
-            --collect-dependencies \
             --component path:/project/frontend \
             --component path:/project/worker
 
     Components not present as VCS checkouts:
 
         $ opbeat deployment \
-            --collect-dependencies \
             --component \
                 path:/project/frontend \
                 version:1.3.2 \
@@ -531,10 +552,10 @@ Examples:
                 type:other \
                 name:nginx \
                 version:$(nginx -v 2>&1 | cut -d / -f 2) \
+            --no-auto-collect-dependencies \
             --collect-dependencies \
                 deb ruby python \
                 python:'payments/server/virtualenv/bin/pip freeze' \
                 nodejs:'cd payments/frontend && npm --local --json list'
-
 
 """
