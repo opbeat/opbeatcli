@@ -12,14 +12,15 @@ except ImportError:
 
 class CommonCLITest(unittest.TestCase):
 
-    def test_opbeat_cli(self):
-
+    def test_opbeat_cli_no_arguments(self):
         main(args=[])
 
+    def test_opbeat_cli_help(self):
         with self.assertRaises(SystemExit) as cm:
             main(args=['--help'])
         self.assertEqual(cm.exception.code, EXIT_SUCCESS)
 
+    def test_opbeat_cli_version(self):
         with self.assertRaises(SystemExit) as cm:
             main(args=['--version'])
         self.assertEqual(cm.exception.code, EXIT_SUCCESS)
