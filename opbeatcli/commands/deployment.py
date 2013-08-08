@@ -166,13 +166,13 @@ class DeploymentCommand(CommandBase):
 
     def collect_dependencies(self):
 
-        if not self.args.do_auto_collect and not self.args.collect:
+        if not self.args.do_auto_collect and not self.args.explicit_collect:
             self.logger.debug('Not collecting dependencies.')
 
         auto_collect = (DEPENDENCY_COLLECTORS.copy()
                         if self.args.do_auto_collect else {})
 
-        if self.args.collect:
+        if self.args.explicit_collect:
             # This is how
             # "--collect-dependencies python:py_custom ruby:rb_custom python"
             # => {python: [py_custom, <py default cmds>],
@@ -181,10 +181,11 @@ class DeploymentCommand(CommandBase):
             get_type = attrgetter('key')
             get_command = attrgetter('value')
             # Group by type so that we can instantiate one collector per type:
-            groups = groupby(sorted(self.args.collect, key=get_type),
+            groups = groupby(sorted(self.args.explicit_collect, key=get_type),
                              key=get_type)
             for dep_type, group in groups:
-
+                self.logger.debug('Explicit %r dependency collection',
+                                  dep_type)
                 if dep_type in auto_collect:
                     del auto_collect[dep_type]
 
@@ -412,17 +413,18 @@ Introduction:
             default). These types of dependencies are attempted to be
             collected:
 
-                {types}
+                {dependency_types}
 
             For each type, there is one or more default shell commands which
             are run to collect information about the dependencies:
 
-{default_commands}
+{default_commands_table}
 
             """
             .format(
-                types=', '.join(sorted(DEPENDENCY_COLLECTORS.keys())),
-                default_commands=''.join(sorted(
+                dependency_types=', '.join(
+                    sorted(DEPENDENCY_COLLECTORS.keys())),
+                default_commands_table=''.join(sorted(
                     "{type: >23}: {commands}\n"
                     .format(
                         type=dep_type,
@@ -449,7 +451,7 @@ Introduction:
             '--collect-dependencies',
             nargs=argparse.ONE_OR_MORE,
             metavar='type[:command]',
-            dest='collect',
+            dest='explicit_collect',
             type=KeyOptionalValue.from_string,
             help=r"""
 
