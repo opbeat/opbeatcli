@@ -305,21 +305,20 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
 
     def test_auto_collect_dependencies_extend_type(self):
 
-        package_count = sum(
-            1 for package in self.get_deployment_command('').get_all_packages()
-            if isinstance(package, PythonDependency)
+        python_dep_count = sum(
+            isinstance(package, PythonDependency)
+            for package in self.get_deployment_command('').get_all_packages()
         )
-        package_count_extended = sum(
-            1 for package in self.get_deployment_command("""
+        python_dep_count_extended = sum(
+            isinstance(package, PythonDependency)
+            for package in self.get_deployment_command("""
                 --collect-dependencies
                     python
                     python:'echo NAME==VERSION'
             """).get_all_packages()
-            if isinstance(package, PythonDependency)
         )
 
-        self.assertEqual(package_count_extended - package_count, 1)
-
+        self.assertEqual(python_dep_count_extended - python_dep_count, 1)
 
     def test_no_auto_collect_dependencies(self):
         packages = list(
