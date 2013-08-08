@@ -25,8 +25,8 @@ def get_command(args=sys.argv[1:]):
 def main(args=sys.argv[1:]):
     """Run command and return exit status code."""
 
-    if len(sys.argv) < 2:
-        parser.print_help()
+    if not args:
+        get_parser().print_help()
         return EXIT_SUCCESS
 
     command = get_command(args)
@@ -43,7 +43,7 @@ def main(args=sys.argv[1:]):
     except OpbeatError as e:
         logger.error(e)
         if not command.args.verbose:
-            logger.error('Run again with --verbose to see more details.')
+            logger.info('Run again with --verbose to see more details.')
         return EXIT_ERROR
     except Exception:
         logger.exception('Error executing command')

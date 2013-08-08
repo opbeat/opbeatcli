@@ -275,7 +275,6 @@ class DeploymentCommand(CommandBase):
 
         return components + dependencies
 
-
     DESCRIPTION = """
 Introduction:
     This command registers a deployment of an application to a machine with
