@@ -12,7 +12,6 @@ from opbeatcli.deployment.packages.ruby import RubyDependency
 from opbeatcli.deployment.packages.component import Component
 from opbeatcli.deployment.vcs import expand_ssh_host_alias
 from opbeatcli.core import get_command, main, EXIT_SUCCESS
-from opbeatcli.cli import ENV
 from opbeatcli.commands.deployment import KeyValue, PackageSpecValidator
 from opbeatcli.exceptions import (InvalidArgumentError,
                                   DependencyParseError,
@@ -24,32 +23,6 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-
-
-class CommonOptionsEnvironmentVariablesTest(unittest.TestCase):
-
-    def test_common_options_environment_variables(self):
-        var_names = [
-            ENV.APP_ID,
-            ENV.ORGANIZATION_ID,
-            ENV.SERVER,
-            ENV.TOKEN,
-        ]
-
-        for name in var_names:
-            os.environ[name] = name
-
-        try:
-            args = get_command(['deployment']).args
-            self.assertEqual(args.app_id, ENV.APP_ID)
-            self.assertEqual(
-                args.organization_id, ENV.ORGANIZATION_ID)
-            self.assertEqual(args.secret_token, ENV.TOKEN)
-            self.assertEqual(args.server, ENV.SERVER)
-
-        finally:
-            for name in var_names:
-                del os.environ[name]
 
 
 class TestPackageSpecArgParsingAndValidation(unittest.TestCase):
