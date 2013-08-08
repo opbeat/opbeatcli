@@ -146,8 +146,9 @@ class DeploymentCommand(CommandBase):
     def get_data(self):
         packages = list(self.get_all_packages())
 
-        component_count = sum(package.package_type == Component.package_type
-                              for package in packages)
+        component_count = sum(
+            isinstance(package, Component) for package in packages
+        )
         self.logger.info('The app (%s) has %d components and %d dependencies',
                          self.args.app_id,
                          component_count,
