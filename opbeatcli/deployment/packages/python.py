@@ -4,9 +4,8 @@ Python requirements and their discovery.
 http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-format
 
 """
-import requirements
-
 from opbeatcli.exceptions import DependencyParseError
+from opbeatcli.utils import requirements
 from .base import BaseDependencyCollector, BaseDependency
 from .types import PYTHON_PACKAGE
 from ..vcs import VCS
