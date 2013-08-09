@@ -130,7 +130,7 @@ class OpbeatClient(object):
                 code, reason = e.reason.args
             except ValueError:
                 code, reason = None, str(e)
-            if (code, reason) == (36, 'Operation now in progress'):
+            if reason == 'Operation now in progress':
                 error_msg = 'request timed out (--timeout=%.2f)' % self.timeout
             else:
                 error_msg = reason
