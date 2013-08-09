@@ -6,10 +6,10 @@ from opbeatcli.exceptions import InvalidArgumentError
 from opbeatcli.utils.ssh_config import SSHConfig
 
 try:
-    # noinspection PyCompatibility
+    #noinspection PyCompatibility
     from urllib.parse import urlsplit, urlunsplit
 except ImportError:  # Python < 3.0
-    # noinspection PyCompatibility
+    #noinspection PyCompatibility, PyUnresolvedReferences
     from urlparse import urlsplit, urlunsplit
 
 

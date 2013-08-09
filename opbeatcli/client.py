@@ -126,7 +126,10 @@ class OpbeatClient(object):
             raise ClientHTTPError(e.code)
 
         except URLError as e:  # Connection error.
-            code, reason = e.reason.args
+            try:
+                code, reason = e.reason.args
+            except ValueError:
+                code, reason = None, str(e)
             if (code, reason) == (36, 'Operation now in progress'):
                 error_msg = 'request timed out (--timeout=%.2f)' % self.timeout
             else:
