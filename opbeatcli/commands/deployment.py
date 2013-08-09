@@ -56,9 +56,8 @@ class PackageSpecValidator(object):
         self.name = _name
         self.schema = schema
         self.allowed = set(self.schema.keys())
-        self.required = set(
-            field for field, required in self.schema.items() if required
-        )
+        self.required = set(field for field, required in self.schema.items()
+                            if required)
 
     def validation_error(self, error_name, attributes):
         raise InvalidArgumentError(
@@ -137,7 +136,7 @@ class DeploymentCommand(CommandBase):
         try:
             data = self.get_data()
         except InvalidArgumentError as e:
-            self.parser.error(e.message)
+            self.parser.error(str(e))
         else:
             self.logger.info('Sending data')
             self.client.post(uri=settings.DEPLOYMENT_API_URI, data=data)
@@ -146,9 +145,8 @@ class DeploymentCommand(CommandBase):
     def get_data(self):
         packages = list(self.get_all_packages())
 
-        component_count = sum(
-            isinstance(package, Component) for package in packages
-        )
+        component_count = sum(isinstance(package, Component)
+                              for package in packages)
         self.logger.info('The app (%s) has %d components and %d dependencies',
                          self.args.app_id,
                          component_count,

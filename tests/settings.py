@@ -3,7 +3,7 @@
 # This file is both valid Python and Bash script.
 #
 # Python: Import auth args:
-#     from .setttings import AUTH_ARGS
+#     from .settings import AUTH_ARGS
 #
 # Bash: set environment variables with auth info for `opbeat':
 #   $ . settings.py

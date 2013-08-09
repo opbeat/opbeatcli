@@ -5,15 +5,26 @@ Opbeat log API client.
 import json
 import logging
 
-import requests
-
 from opbeatcli import __version__
 from opbeatcli.log import logger
 from opbeatcli import settings
-from opbeatcli.exceptions import (
-    ClientConnectionError,
-    ClientHTTPError
-)
+from opbeatcli.exceptions import ClientConnectionError, ClientHTTPError
+
+
+try:
+    #noinspection PyCompatibility
+    from urllib.request import Request, urlopen, URLError, HTTPError
+    #noinspection PyCompatibility
+    from http.server import BaseHTTPRequestHandler
+
+except ImportError:
+    #noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib2 import Request, urlopen, URLError, HTTPError
+    #noinspection PyCompatibility,PyUnresolvedReferences
+    from BaseHTTPServer import BaseHTTPRequestHandler
+
+
+HTTP_RESPONSE_CODES = BaseHTTPRequestHandler.responses
 
 
 class OpbeatClient(object):
@@ -40,6 +51,29 @@ class OpbeatClient(object):
         for k in ['server', 'organization_id', 'app_id']:
             self.logger.info('  %16s: %r' % (k, str(getattr(self, k))))
 
+    def log_request(self, uri, headers, payload):
+        """
+        :type request: Request
+        """
+        self.logger.debug('> Server: %s', self.server)
+        self.logger.debug('> HTTP/1.1 POST %s', uri)
+        for header, value in headers.items():
+            self.logger.debug('> %s: %s', header, value)
+        self.logger.debug('> %s', payload)
+
+    def log_response(self, response, level=logging.DEBUG):
+        """
+        :type response: HTTPResponse
+        """
+        self.logger.log(level, '< HTTP %d %s',
+                        response.code,
+                        HTTP_RESPONSE_CODES[response.code][0])
+
+        body = response.read()
+
+        if body:
+            self.logger.log(level, '< %s', body)
+
     def post(self, uri, data):
         """
         HTTP POST ``data`` as JSON to collection identified by ``uri``.
@@ -65,62 +99,44 @@ class OpbeatClient(object):
             'Authorization': 'Bearer %s' % self.secret_token,
             'Content-Type': 'application/json',
         }
-
-        data = dict(
-            data,
-            organization_id=self.organization_id,
-            app_id=self.app_id
+        payload = json.dumps(data, indent=2, sort_keys=True)
+        request = Request(
+            url=url,
+            headers=headers,
+            data=payload.encode('utf8')
         )
 
-        payload = json.dumps(data, indent=2, sort_keys=True)
-
-        self.logger.debug('> Server: %s', self.server)
-        self.logger.debug('> HTTP/1.1 POST %s', uri)
-        self.logger.debug('> %s', payload)
+        self.log_request(uri, headers, payload)
 
         if self.dry_run:
             self.logger.info('Not sending because --dry-run.')
             return
 
         try:
-            response = requests.post(
-                url=url,
-                data=payload,
-                headers=headers,
+            response = urlopen(
+                request,
                 timeout=self.timeout,
             )
-        except requests.Timeout as e:
-            self.logger.error(
-                'connection error: request timed out'
-                ' (--timeout=%f)',
-                self.timeout
-            )
-            self.logger.debug('request failed', exc_info=True)
-            raise ClientConnectionError(e)
-        except requests.ConnectionError as e:
-            self.logger.error(
-                'connection error: Unable to reach Opbeat server: %s',
-                url,
-            )
-            self.logger.debug('request failed', exc_info=True)
-            raise ClientConnectionError(e)
+        # voidspace.org.uk/python/articles/urllib2.shtml#handling-exceptions
+        except HTTPError as e:
+            self.logger.error('< The server could not fulfill the request')
+            self.logger.debug('HTTP error', exc_info=True)
+            self.log_response(e, level=logging.ERROR)
+
+            raise ClientHTTPError(e.code)
+
+        except URLError as e:  # Connection error.
+            code, reason = e.reason.args
+            if (code, reason) == (36, 'Operation now in progress'):
+                error_msg = 'request timed out (--timeout=%.2f)' % self.timeout
+            else:
+                error_msg = reason
+            self.logger.error('Unable to reach the API server: %s', error_msg)
+            self.logger.debug('URL error (connection error)', exc_info=0)
+
+            raise ClientConnectionError(error_msg)
+
         except Exception:
             raise  # Unexpected error, not handled here.
         else:
-
-            def log_response(level):
-                self.logger.log(
-                    level,
-                    '< HTTP %d %s',
-                    response.status_code,
-                    response.reason
-                )
-                if response.text.strip():
-                    self.logger.log(level, '< %s', response.text)
-
-            if response.status_code >= 400:
-                log_response(logging.ERROR)
-                raise ClientHTTPError(response.status_code)
-
-            else:
-                log_response(logging.DEBUG)
+            self.log_response(response, level=logging.DEBUG)

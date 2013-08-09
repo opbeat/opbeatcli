@@ -1,3 +1,2 @@
 pip>=1.2.1
-requests>=1.2.0
 requirements-parser==0.0.4
