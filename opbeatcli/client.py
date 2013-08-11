@@ -52,9 +52,6 @@ class OpbeatClient(object):
             self.logger.info('  %16s: %r' % (k, str(getattr(self, k))))
 
     def log_request(self, uri, headers, payload):
-        """
-        :type request: Request
-        """
         self.logger.debug('> Server: %s', self.server)
         self.logger.debug('> HTTP/1.1 POST %s', uri)
         for header, value in headers.items():

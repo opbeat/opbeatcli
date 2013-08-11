@@ -5,7 +5,7 @@ It provides access to the Opbeat API through the command line. It is also
 useful for use in your own applications. "opbeat" is installed as a binary.
 
 """
-from setuptools import setup
+from setuptools import setup, find_packages
 
 from opbeatcli import __version__
 
@@ -53,7 +53,7 @@ setup(
     url='http://github.com/opbeat/opbeatcli',
     description=__doc__.strip(),
     long_description=long_description,
-    packages=['opbeatcli'],
+    packages=find_packages('.', exclude=['tests']),
     zip_safe=False,
     install_requires=install_requires,
     tests_require=tests_require,
