@@ -13,7 +13,6 @@ except ImportError:  # Python < 3.0
     from urlparse import urlsplit, urlunsplit
 
 
-
 # {'commonly used short name': 'long name'}
 # we use long names in the API
 VCS_NAME_MAP = {
@@ -22,6 +21,14 @@ VCS_NAME_MAP = {
     'svn': 'subversion',
     'bzr': 'bazaar',
 }
+
+
+# $GIT_DIR/$GIT_WORK_TREE overwrite $CWD as the repository location. And
+# because `pip.vcs.git` relies on Git using $CWD, we need to unset those.
+# (Pip should use --work-tree=<dir> https://github.com/pypa/pip/issues/1130)
+# $GIT_DIR is set for example when `opbeat' is invoked from a Git hook.
+os.environ.pop('GIT_DIR', None)
+os.environ.pop('GIT_WORK_TREE', None)
 
 
 def find_vcs_root(path):
@@ -68,7 +75,7 @@ class VCS(object):
     def from_path(cls, path):
         backend_class = vcs.get_backend_from_location(path)
         if backend_class:
-            backend = backend_class(path)
+            backend = backend_class()
             return VCS(
                 vcs_type=VCS_NAME_MAP[backend.name],
                 rev=backend.get_revision(path),
