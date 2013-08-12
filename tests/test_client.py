@@ -1,5 +1,5 @@
 from opbeatcli.client import OpbeatClient
-from opbeatcli.exceptions import ClientConnectionError, ClientHTTPError
+from opbeatcli.exceptions import ClientConnectionError
 from opbeatcli import settings
 
 try:

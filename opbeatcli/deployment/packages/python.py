@@ -18,7 +18,17 @@ except ImportError:
 
 
 def parse_editable(uri):
-    # See tests/fixtures/pip_freeze.txt.
+    """
+    <remote_url>@<rev>#egg=<name>
+
+    See `pip.vcs.<backend>.<Backend>.get_src_requirement()`.
+
+    There is no version as such, but each of the VCS backends appends
+    some VCS info to the name (or just '-dev').
+
+    TODO: we could extract the version from the name.
+
+    """
 
     bits = urlsplit(uri)
 
@@ -39,7 +49,6 @@ def parse_editable(uri):
         assert bits.scheme == 'git', bits.scheme
         vcs_type = 'git'
 
-    version = None
     if '#' in bits.path:
         # Python 2.6 sometimes fail to parse fragment.
         # /ipython/ipython.git@rev#egg=ipython-dev
@@ -48,15 +57,12 @@ def parse_editable(uri):
         name = bits.fragment.split('=', 1)[1]
         rev = bits.path.split('@')[1]
 
-    if '==' in name:
-        name, version = name.split('==')
-
     if remove_scheme:
         remote_url = remote_url[len(bits.scheme) + 3:]
 
     parsed = {
         'name': name,
-        'version': version,
+        'version': None,
         'vcs': {
             'vcs_type': VCS_NAME_MAP[vcs_type],
             'rev': rev,

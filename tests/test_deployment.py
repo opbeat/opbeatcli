@@ -383,7 +383,7 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             },
             {
                 'name': 'project',
-                'version': '3.0',
+                'version': None,
                 'vcs': {
                     'vcs_type': 'git',
                     'remote_url': 'git://git.project.org/project.git',
@@ -393,7 +393,7 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             },
             {
                 'name': 'project',
-                'version': '3.0',
+                'version': None,
                 'vcs': {
                     'vcs_type': 'subversion',
                     'remote_url': 'http://svn.project.org/svn/project/trunk',
@@ -403,7 +403,7 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             },
             {
                 'name': 'project',
-                'version': '3.0',
+                'version': None,
                 'vcs': {
                     'vcs_type': 'mercurial',
                     'remote_url': 'http://hg.project.org/project/',
@@ -413,7 +413,7 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             },
             {
                 'name': 'project',
-                'version': '3.0',
+                'version': None,
                 'vcs': {
                     'vcs_type': 'bazaar',
                     'remote_url': 'https://bzr.project.org/project/trunk/',
