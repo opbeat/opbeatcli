@@ -589,7 +589,7 @@ class DeploymentAPIVersion1SerializationTest(BaseDeploymentCommandTestCase):
                     'path': '/PATH',
                     'version': '1.0',
                     'module': {
-                        'module_type': 'repository',
+                        'type': 'repository',
                         'name': 'COMPONENT1'
                     }
                 },
@@ -603,14 +603,14 @@ class DeploymentAPIVersion1SerializationTest(BaseDeploymentCommandTestCase):
                         'revision': 'REV'
                     },
                     'module': {
-                        'module_type': 'repository',
+                        'type': 'repository',
                         'name': 'COMPONENT2',
                     }
                 },
                 {
                     'version': 'VERSION',
                     'module': {
-                        'module_type': 'other',
+                        'type': 'other',
                         'name': 'DEPENDENCY1',
                     }
                 },
@@ -623,7 +623,7 @@ class DeploymentAPIVersion1SerializationTest(BaseDeploymentCommandTestCase):
                         'revision': 'REV'},
                     'module': {
                         'name': 'DEPENDENCY2',
-                        'module_type': 'other',
+                        'type': 'other',
                     }
                 }
             ]

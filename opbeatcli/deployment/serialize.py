@@ -35,13 +35,13 @@ def package(pkg):
     data = {
         'module': {
             'name': pkg.name,
-            'module_type': pkg.package_type,
+            'type': pkg.package_type,
         },
         'version': pkg.version
     }
     if isinstance(pkg, Component):
         data['path'] = pkg.path
-        data['module']['module_type'] = LEGACY_COMPONENT_PACKAGE
+        data['module']['type'] = LEGACY_COMPONENT_PACKAGE
 
     if pkg.vcs:
         data['vcs'] = {
