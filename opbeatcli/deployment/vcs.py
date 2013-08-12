@@ -13,10 +13,14 @@ except ImportError:  # Python < 3.0
     from urlparse import urlsplit, urlunsplit
 
 
+
+# {'commonly used short name': 'long name'}
+# we use long names in the API
 VCS_NAME_MAP = {
     'git': 'git',
     'hg': 'mercurial',
-    'svn': 'subversion'
+    'svn': 'subversion',
+    'bzr': 'bazaar',
 }
 
 
@@ -38,7 +42,7 @@ class VCS(object):
 
         types = list(VCS_NAME_MAP.values())
 
-        if vcs_type not in types:
+        if vcs_type is not None and vcs_type not in types:
             raise InvalidArgumentError(
                 'invalid VCS type %r, it has to be one of %s' % (
                     vcs_type,
@@ -48,7 +52,7 @@ class VCS(object):
         self.vcs_type = vcs_type
         self.rev = rev
         self.branch = branch
-        self.remote_url = remote_url
+        self.remote_url = expand_ssh_host_alias(remote_url)
 
     def __repr__(self):
         return (
@@ -68,7 +72,7 @@ class VCS(object):
             return VCS(
                 vcs_type=VCS_NAME_MAP[backend.name],
                 rev=backend.get_revision(path),
-                remote_url=expand_ssh_host_alias(backend.get_url(path)),
+                remote_url=backend.get_url(path),
                 # TODO: branch support.
                 branch=None,
             )

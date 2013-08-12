@@ -353,23 +353,88 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             --collect-dependencies python:"cat fixtures/pip_freeze.txt"
         """)
         dependencies = list(command.collect_dependencies())
-        self.assertEqual(len(dependencies), 8)
+        self.assertEqual(len(dependencies), 7)
         self.assertTrue(all(isinstance(dep, PythonDependency)
                             for dep in dependencies))
         expected = [
-            {'name': 'nose', 'version': '1.3.0'},
-            {'name': 'opbeatcli-dev', 'vcs': {
-                'vcs_type': 'git',
-                'remote_url': 'git@github.com:opbeat/opbeatcli.git',
-            }},
-        ]
+            {
+                'name': 'MyPackage',
+                'version': '3.0'
+            },
+            {
+                'name': 'opbeatcli-dev',
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'git',
+                    'remote_url': 'git@github.com:opbeat/opbeatcli.git',
+                    'rev': 'a27946a613b84b1b0a8f029b8ec1f08d87565db9'
 
+                }
+            },
+            {
+                'name': 'ipython-dev',
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'git',
+                    'remote_url': 'https://github.com/ipython/ipython.git',
+                    'rev': 'dbf7918fdeb54b3fb2946c4492d6fce867356404'
+
+                }
+            },
+            {
+                'name': 'project',
+                'version': '3.0',
+                'vcs': {
+                    'vcs_type': 'git',
+                    'remote_url': 'git://git.project.org/project.git',
+                    'rev': 'asdasdasd',
+
+                }
+            },
+            {
+                'name': 'project',
+                'version': '3.0',
+                'vcs': {
+                    'vcs_type': 'subversion',
+                    'remote_url': 'http://svn.project.org/svn/project/trunk',
+                    'rev': '2019',
+
+                }
+            },
+            {
+                'name': 'project',
+                'version': '3.0',
+                'vcs': {
+                    'vcs_type': 'mercurial',
+                    'remote_url': 'http://hg.project.org/project/',
+                    'rev': 'da39a3ee5e6b',
+
+                }
+            },
+            {
+                'name': 'project',
+                'version': '3.0',
+                'vcs': {
+                    'vcs_type': 'bazaar',
+                    'remote_url': 'https://bzr.project.org/project/trunk/',
+                    'rev': '2019',
+
+                }
+            },
+        ]
         for dependency, attrs in zip(dependencies, expected):
             self.assert_package_attributes(dependency, attrs)
 
     def test_collect_python_parse_error(self):
         command = self.get_deployment_command(
             '--collect-dependencies python:"echo invalid-requirement="'
+        )
+        with self.assertRaises(DependencyParseError):
+            list(command.collect_dependencies())
+
+    def test_collect_python_parse_error_editable(self):
+        command = self.get_deployment_command(
+            '--collect-dependencies python:"echo \'-e foo\'"'
         )
         with self.assertRaises(DependencyParseError):
             list(command.collect_dependencies())
@@ -614,3 +679,7 @@ class TestSSHAliasExpansion(unittest.TestCase):
     def test_pass_through_http(self):
         url = 'https://github.com/omab/django-social-auth.git'
         self.assert_url_after_expansion_equals(url, url)
+
+
+if __name__ == '__main__':
+    unittest.main()

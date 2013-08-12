@@ -4,11 +4,73 @@ Python requirements and their discovery.
 http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-format
 
 """
+
 from opbeatcli.exceptions import DependencyParseError
-from opbeatcli.utils import requirements
 from .base import BaseDependencyCollector, BaseDependency
 from .types import PYTHON_PACKAGE
-from ..vcs import VCS
+from ..vcs import VCS, VCS_NAME_MAP
+
+try:
+    #noinspection PyCompatibility
+    from urllib.parse import urlsplit
+except ImportError:
+    #noinspection PyCompatibility
+    from urlparse import urlsplit
+
+
+def parse_editable(uri):
+    # See tests/fixtures/pip_freeze.txt.
+
+    bits = urlsplit(uri)
+
+    remove_scheme = False
+
+    if not bits.scheme:
+        # git+git@github.com:opbeat/opbeatcli.git@a2794#egg=opbeatcli-dev
+        assert uri.startswith('git+')
+        uri = 'git://' + uri[4:]
+        bits = urlsplit(uri)
+        remove_scheme = True
+
+    remote_url = uri.rsplit('@', 1)[0]
+
+    if '+' in bits.scheme:
+        vcs_type, remote_url = remote_url.split('+', 1)
+    else:
+        assert bits.scheme == 'git', bits.scheme
+        vcs_type = 'git'
+
+    version = None
+    if '#' in bits.path:
+        # Python 2.6 sometimes fail to parse fragment.
+        # /ipython/ipython.git@rev#egg=ipython-dev
+        rev, name = bits.path.split('@')[1].split('#egg=')
+    else:
+        name = bits.fragment.split('=', 1)[1]
+        rev = bits.path.split('@')[1]
+
+    if '==' in name:
+        name, version = name.split('==')
+
+    if remove_scheme:
+        remote_url = remote_url[len(bits.scheme) + 3:]
+
+    parsed = {
+        'name': name,
+        'version': version,
+        'vcs': {
+            'vcs_type': VCS_NAME_MAP[vcs_type],
+            'rev': rev,
+            'remote_url': remote_url,
+        }
+    }
+
+    assert (parsed['name']
+            and parsed['vcs']['rev']
+            and parsed['vcs']['vcs_type']
+            and parsed['vcs']['remote_url']), parsed
+
+    return parsed
 
 
 class PythonCollector(BaseDependencyCollector):
@@ -18,36 +80,30 @@ class PythonCollector(BaseDependencyCollector):
     ]
 
     def parse(self, output):
-        try:
-            reqs = list(requirements.parse(output))
-        except ValueError as e:
-            raise DependencyParseError(str(e))
+        # Note: we only parse `pip freeze' output, not raw dependency specs.
+        for line in output.splitlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
 
-        for req in reqs:
-            # {'extras': [], 'name': 'redis', 'specs': [('==', '2.6.2')]}
-            try:
-                version = req['specs'][0][1]
-            except (KeyError, IndexError):
-                version = None
+            if line.startswith('-e'):
+                try:
+                    kwargs = parse_editable(line.split(None, 1)[1])
+                except Exception:
+                    msg = 'Unparseable editable requirement: %r' % str(line)
+                    self.logger.debug(msg, exc_info=True)
+                    raise DependencyParseError(msg)
 
-            if 'vcs' not in req:
-                vcs = None
+                kwargs['vcs'] = VCS(**kwargs['vcs'])
+                yield PythonDependency(**kwargs)
+
             else:
-                uri = req['uri']
-                at = uri.rindex('@')
-                # FIXME: rev can also be a tag or branch
-                remote_url, rev = uri[:at], uri[at + 1:]
-                vcs = VCS(
-                    vcs_type=req['vcs'],
-                    remote_url=remote_url,
-                    rev=rev
-                )
+                try:
+                    name, version = line.split('==')
+                except ValueError:
+                    raise DependencyParseError(line)
 
-            yield PythonDependency(
-                name=req['name'],
-                version=version,
-                vcs=vcs,
-            )
+                yield PythonDependency(name=name, version=version)
 
 
 class PythonDependency(BaseDependency):
