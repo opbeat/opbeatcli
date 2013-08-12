@@ -4,7 +4,6 @@ Python requirements and their discovery.
 http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-format
 
 """
-
 from opbeatcli.exceptions import DependencyParseError
 from .base import BaseDependencyCollector, BaseDependency
 from .types import PYTHON_PACKAGE
