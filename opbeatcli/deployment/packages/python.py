@@ -23,11 +23,6 @@ def parse_editable(uri):
 
     See `pip.vcs.<backend>.<Backend>.get_src_requirement()`.
 
-    There is no version as such, but each of the VCS backends appends
-    some VCS info to the name (or just '-dev').
-
-    TODO: we could extract the version from the name.
-
     """
 
     bits = urlsplit(uri)
@@ -50,7 +45,7 @@ def parse_editable(uri):
         vcs_type = 'git'
 
     if '#' in bits.path:
-        # Python 2.6 sometimes fail to parse fragment.
+        # Python 2.6 sometimes fails to parse fragment.
         # /ipython/ipython.git@rev#egg=ipython-dev
         rev, name = bits.path.split('@')[1].split('#egg=')
     else:
@@ -60,9 +55,16 @@ def parse_editable(uri):
     if remove_scheme:
         remote_url = remote_url[len(bits.scheme) + 3:]
 
+    version = None
+    if vcs_type in ['git', 'hg', 'bzr']:
+        # There is no version as such, but each of the VCS backends appends
+        # some VCS info to the name (or just '-dev'). SVN is tricky, so we
+        # don't parse the name there.
+        name, version = name.rsplit('-', 1)
+
     parsed = {
         'name': name,
-        'version': None,
+        'version': version,
         'vcs': {
             'vcs_type': VCS_NAME_MAP[vcs_type],
             'rev': rev,
@@ -70,10 +72,10 @@ def parse_editable(uri):
         }
     }
 
-    assert (parsed['name']
-            and parsed['vcs']['rev']
-            and parsed['vcs']['vcs_type']
-            and parsed['vcs']['remote_url']), parsed
+    assert all([parsed['name'],
+                parsed['vcs']['rev'],
+                parsed['vcs']['vcs_type'],
+                parsed['vcs']['remote_url']]), parsed
 
     return parsed
 

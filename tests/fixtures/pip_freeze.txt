@@ -3,8 +3,8 @@ MyPackage==3.0
 
 -e git+git@github.com:opbeat/opbeatcli.git@a27946a613b84b1b0a8f029b8ec1f08d87565db9#egg=opbeatcli-dev
 -e git+https://github.com/ipython/ipython.git@dbf7918fdeb54b3fb2946c4492d6fce867356404#egg=ipython-dev
--e git://git.project.org/project.git@asdasdasd#egg=project
+-e git://git.project.org/project.git@asdasdasd#egg=project-dev
 
+-e hg+http://hg.project.org/project/@da39a3ee5e6b#egg=project-project-dev
+-e bzr+https://bzr.project.org/project/trunk/@2019#egg=project-dev
 -e svn+http://svn.project.org/svn/project/trunk@2019#egg=project
--e hg+http://hg.project.org/project/@da39a3ee5e6b#egg=project
--e bzr+https://bzr.project.org/project/trunk/@2019#egg=project

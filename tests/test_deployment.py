@@ -362,8 +362,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
                 'version': '3.0'
             },
             {
-                'name': 'opbeatcli-dev',
-                'version': None,
+                'name': 'opbeatcli',
+                'version': 'dev',
                 'vcs': {
                     'vcs_type': 'git',
                     'remote_url': 'git@github.com:opbeat/opbeatcli.git',
@@ -372,8 +372,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
                 }
             },
             {
-                'name': 'ipython-dev',
-                'version': None,
+                'name': 'ipython',
+                'version': 'dev',
                 'vcs': {
                     'vcs_type': 'git',
                     'remote_url': 'https://github.com/ipython/ipython.git',
@@ -383,7 +383,7 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             },
             {
                 'name': 'project',
-                'version': None,
+                'version': 'dev',
                 'vcs': {
                     'vcs_type': 'git',
                     'remote_url': 'git://git.project.org/project.git',
@@ -392,18 +392,8 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
                 }
             },
             {
-                'name': 'project',
-                'version': None,
-                'vcs': {
-                    'vcs_type': 'subversion',
-                    'remote_url': 'http://svn.project.org/svn/project/trunk',
-                    'rev': '2019',
-
-                }
-            },
-            {
-                'name': 'project',
-                'version': None,
+                'name': 'project-project',
+                'version': 'dev',
                 'vcs': {
                     'vcs_type': 'mercurial',
                     'remote_url': 'http://hg.project.org/project/',
@@ -413,10 +403,20 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             },
             {
                 'name': 'project',
-                'version': None,
+                'version': 'dev',
                 'vcs': {
                     'vcs_type': 'bazaar',
                     'remote_url': 'https://bzr.project.org/project/trunk/',
+                    'rev': '2019',
+
+                }
+            },
+            {
+                'name': 'project',
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'subversion',
+                    'remote_url': 'http://svn.project.org/svn/project/trunk',
                     'rev': '2019',
 
                 }
