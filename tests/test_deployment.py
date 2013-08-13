@@ -224,9 +224,9 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
                 'vcs': {
                     'vcs_type': 'subversion',
                     'branch': 'trunk',
-                    'remote_url': 'https://github.com/opbeat/opbeatcli/trunk'
                 }
             })
+            self.assertIn('opbeat/opbeatcli.git', package.vcs.remote_url)
             self.assertIsNotNone(package.vcs.rev)
 
         finally:
