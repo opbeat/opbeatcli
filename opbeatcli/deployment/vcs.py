@@ -1,17 +1,10 @@
 import os
-import subprocess
 
 from pip.vcs import vcs
 
 from opbeatcli.exceptions import InvalidArgumentError
 from opbeatcli.utils.ssh_config import SSHConfig
-
-try:
-    #noinspection PyCompatibility
-    from urllib.parse import urlsplit, urlunsplit
-except ImportError:  # Python < 3.0
-    #noinspection PyCompatibility, PyUnresolvedReferences
-    from urlparse import urlsplit, urlunsplit
+from opbeatcli.compat import urlsplit, urlunsplit, check_output
 
 
 # {'commonly used short name': 'long name'}
@@ -52,16 +45,16 @@ def get_branch(backend, path):
 
     """
     if backend.name == 'git':
-        output = subprocess.check_output([backend.cmd, 'branch'], cwd=path)
+        output = check_output([backend.cmd, 'branch'], cwd=path)
         output = output.decode()
         for branch in output.splitlines():
             if branch.startswith('* '):
                 return branch[2:]
     elif backend.name == 'hg':
-        output = subprocess.check_output([backend.cmd, 'branch'], cwd=path)
+        output = check_output([backend.cmd, 'branch'], cwd=path)
         return output.decode().strip()
     elif backend.name == 'svn':
-        output = subprocess.check_output([backend.cmd, 'info'], cwd=path)
+        output = check_output([backend.cmd, 'info'], cwd=path)
         output = output.decode()
         for line in output.splitlines():
             if line.startswith('URL: '):

@@ -9,19 +9,8 @@ from opbeatcli import __version__
 from opbeatcli.log import logger
 from opbeatcli import settings
 from opbeatcli.exceptions import ClientConnectionError, ClientHTTPError
-
-
-try:
-    #noinspection PyCompatibility
-    from urllib.request import Request, urlopen, URLError, HTTPError
-    #noinspection PyCompatibility
-    from http.server import BaseHTTPRequestHandler
-
-except ImportError:
-    #noinspection PyCompatibility,PyUnresolvedReferences
-    from urllib2 import Request, urlopen, URLError, HTTPError
-    #noinspection PyCompatibility,PyUnresolvedReferences
-    from BaseHTTPServer import BaseHTTPRequestHandler
+from opbeatcli.compat import (Request, urlopen, URLError,
+                              HTTPError, BaseHTTPRequestHandler)
 
 
 HTTP_RESPONSE_CODES = BaseHTTPRequestHandler.responses

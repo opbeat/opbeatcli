@@ -1,10 +1,10 @@
 import os
 import shlex
-from operator import attrgetter
 import datetime
 import shutil
-import subprocess
 import tempfile
+import subprocess
+from operator import attrgetter
 
 from pip.vcs import vcs as pip_vcs
 from pip.exceptions import BadCommand
@@ -74,7 +74,7 @@ class TestPackageSpecArgParsingAndValidation(unittest.TestCase):
                 validate(pairs)
 
 
-class BaseDeploymentCommandTestCase(unittest.TestCase):
+class _BaseDeploymentCommandTestCase(unittest.TestCase):
 
     maxDiff = 9999
 
@@ -106,7 +106,7 @@ class BaseDeploymentCommandTestCase(unittest.TestCase):
         )
 
 
-class DeploymentCommandTest(BaseDeploymentCommandTestCase):
+class DeploymentCommandTest(_BaseDeploymentCommandTestCase):
 
     def test_deployment_send_data(self):
         now = datetime.datetime.now().isoformat()
@@ -147,7 +147,7 @@ class DeploymentCommandTest(BaseDeploymentCommandTestCase):
         self.assertEqual(exit_status, EXIT_SUCCESS)
 
 
-class DeploymentVCSComponentsTest(BaseDeploymentCommandTestCase):
+class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
 
     def test_component_arg_from_local_git_repo(self):
         command = self.get_deployment_command('--component path:.')
@@ -236,9 +236,7 @@ class DeploymentVCSComponentsTest(BaseDeploymentCommandTestCase):
         bzr = get_vcs_command('bzr')
         repo = tempfile.mkdtemp()
         try:
-            subprocess.check_call([
-                bzr, 'init', repo
-            ])
+            subprocess.check_call([bzr, 'init', repo])
             command = self.get_deployment_command(
                 '--component path:%r' % str(repo))
             packages = command.get_packages_from_args()
@@ -260,7 +258,7 @@ class DeploymentVCSComponentsTest(BaseDeploymentCommandTestCase):
             shutil.rmtree(repo)
 
 
-class DeploymentCLIPackagesTest(BaseDeploymentCommandTestCase):
+class DeploymentCLIPackagesTest(_BaseDeploymentCommandTestCase):
     """Test --component and --dependency parsing."""
 
     def test_component_from_legacy_directory_arg(self):
@@ -388,7 +386,7 @@ class DeploymentCLIPackagesTest(BaseDeploymentCommandTestCase):
             command.get_packages_from_args()
 
 
-class TestDependencyCollection(BaseDeploymentCommandTestCase):
+class TestDependencyCollection(_BaseDeploymentCommandTestCase):
     """Test automatic dependency collection with valid and invalid output."""
 
     def test_collect_dependencies_duplicate_type(self):
@@ -678,7 +676,7 @@ class TestDependencyCollection(BaseDeploymentCommandTestCase):
             list(command.collect_dependencies())
 
 
-class DeploymentAPIVersion1SerializationTest(BaseDeploymentCommandTestCase):
+class DeploymentAPIVersion1SerializationTest(_BaseDeploymentCommandTestCase):
     """Test serialization as per the Opbeat API version 1 docs."""
 
     def test_deployment_v1_serialization(self):

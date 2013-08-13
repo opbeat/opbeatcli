@@ -5,16 +5,10 @@ http://www.pip-installer.org/en/latest/requirements.html#the-requirements-file-f
 
 """
 from opbeatcli.exceptions import DependencyParseError
+from opbeatcli.compat import urlsplit
 from .base import BaseDependencyCollector, BaseDependency
 from .types import PYTHON_PACKAGE
 from ..vcs import VCS, VCS_NAME_MAP
-
-try:
-    #noinspection PyCompatibility
-    from urllib.parse import urlsplit
-except ImportError:
-    #noinspection PyCompatibility
-    from urlparse import urlsplit
 
 
 def parse_editable(uri):
