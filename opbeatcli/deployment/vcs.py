@@ -53,14 +53,16 @@ def get_branch(backend, path):
     """
     if backend.name == 'git':
         output = subprocess.check_output([backend.cmd, 'branch'], cwd=path)
+        output = output.decode()
         for branch in output.splitlines():
             if branch.startswith('* '):
                 return branch[2:]
     elif backend.name == 'hg':
         output = subprocess.check_output([backend.cmd, 'branch'], cwd=path)
-        return output.strip()
+        return output.decode().strip()
     elif backend.name == 'svn':
         output = subprocess.check_output([backend.cmd, 'info'], cwd=path)
+        output = output.decode()
         for line in output.splitlines():
             if line.startswith('URL: '):
                 return line.split('/')[-1]

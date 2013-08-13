@@ -22,6 +22,7 @@ from opbeatcli.commands.deployment import KeyValue, PackageSpecValidator
 from opbeatcli.exceptions import (InvalidArgumentError,
                                   DependencyParseError,
                                   ExternalCommandNotFoundError)
+#noinspection PyUnresolvedReferences
 import settings
 
 
@@ -105,7 +106,7 @@ class BaseDeploymentCommandTestCase(unittest.TestCase):
         )
 
 
-class DeploymentTest(BaseDeploymentCommandTestCase):
+class DeploymentCommandTest(BaseDeploymentCommandTestCase):
 
     def test_deployment_send_data(self):
         now = datetime.datetime.now().isoformat()
@@ -116,7 +117,8 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
             --dependency type:other name:now version:{now}
 
         """.format(now=now)
-        self.assertEqual(main(settings.AUTH_ARGS + args.split()), EXIT_SUCCESS)
+        exit_status = main(settings.AUTH_ARGS + args.split())
+        self.assertEqual(exit_status, EXIT_SUCCESS)
 
     def test_deployment_help(self):
         # the --help action exits with 0
@@ -145,73 +147,7 @@ class DeploymentTest(BaseDeploymentCommandTestCase):
         self.assertEqual(exit_status, EXIT_SUCCESS)
 
 
-class DeploymentPackagesCLITest(BaseDeploymentCommandTestCase):
-    """Test --component and --dependency parsing."""
-
-    def test_component_from_legacy_directory_arg(self):
-        command = self.get_deployment_command('-d .')
-        packages = command.get_packages_from_args()
-        self.assertEqual(len(packages), 1)
-        package = packages[0]
-        self.assertIsInstance(package, Component)
-        self.assert_package_attributes(package, {
-            'path': self.PATH,
-            'name': self.DIR_NAME,
-            'vcs': {
-                'vcs_type': 'git'
-            }
-        })
-
-    def test_component_from_legacy_directory_and_module_args(self):
-        command = self.get_deployment_command('-d . -m NAME')
-        packages = command.get_packages_from_args()
-        self.assertEqual(len(packages), 1)
-        package = packages[0]
-        self.assertIsInstance(package, Component)
-        self.assert_package_attributes(package, {
-            'path': self.PATH,
-            'name': 'NAME',
-            'vcs': {
-                'vcs_type': 'git'
-            }
-        })
-
-    def test_component_arg_all_attributes(self):
-        command = self.get_deployment_command("""
-            --component
-                path:/PATH
-                name:NAME
-                version:VERSION
-                vcs:git
-                rev:REV
-                branch:BRANCH
-                remote_url:REMOTE
-        """)
-        packages = command.get_packages_from_args()
-        self.assertEqual(len(packages), 1)
-        package = packages[0]
-        self.assertIsInstance(package, Component)
-        self.assert_package_attributes(package, {
-            'path': '/PATH',
-            'name': 'NAME',
-            'version': 'VERSION',
-            'vcs': {
-                'vcs_type': 'git',
-                'branch': 'BRANCH',
-                'rev': 'REV',
-                'remote_url': 'REMOTE'
-            }
-        })
-
-    def test_component_arg_name_optional(self):
-        command = self.get_deployment_command(
-            '--component path:/PATH version:VERSION'
-        )
-        packages = command.get_packages_from_args()
-        self.assertEqual(len(packages), 1)
-        package = packages[0]
-        self.assertIsInstance(package, Component)
-        self.assertEqual(package.name, 'PATH')
+class DeploymentVCSComponentsTest(BaseDeploymentCommandTestCase):
 
     def test_component_arg_from_local_git_repo(self):
         command = self.get_deployment_command('--component path:.')
@@ -322,6 +258,75 @@ class DeploymentPackagesCLITest(BaseDeploymentCommandTestCase):
 
         finally:
             shutil.rmtree(repo)
+
+
+class DeploymentCLIPackagesTest(BaseDeploymentCommandTestCase):
+    """Test --component and --dependency parsing."""
+
+    def test_component_from_legacy_directory_arg(self):
+        command = self.get_deployment_command('-d .')
+        packages = command.get_packages_from_args()
+        self.assertEqual(len(packages), 1)
+        package = packages[0]
+        self.assertIsInstance(package, Component)
+        self.assert_package_attributes(package, {
+            'path': self.PATH,
+            'name': self.DIR_NAME,
+            'vcs': {
+                'vcs_type': 'git'
+            }
+        })
+
+    def test_component_from_legacy_directory_and_module_args(self):
+        command = self.get_deployment_command('-d . -m NAME')
+        packages = command.get_packages_from_args()
+        self.assertEqual(len(packages), 1)
+        package = packages[0]
+        self.assertIsInstance(package, Component)
+        self.assert_package_attributes(package, {
+            'path': self.PATH,
+            'name': 'NAME',
+            'vcs': {
+                'vcs_type': 'git'
+            }
+        })
+
+    def test_component_arg_all_attributes(self):
+        command = self.get_deployment_command("""
+            --component
+                path:/PATH
+                name:NAME
+                version:VERSION
+                vcs:git
+                rev:REV
+                branch:BRANCH
+                remote_url:REMOTE
+        """)
+        packages = command.get_packages_from_args()
+        self.assertEqual(len(packages), 1)
+        package = packages[0]
+        self.assertIsInstance(package, Component)
+        self.assert_package_attributes(package, {
+            'path': '/PATH',
+            'name': 'NAME',
+            'version': 'VERSION',
+            'vcs': {
+                'vcs_type': 'git',
+                'branch': 'BRANCH',
+                'rev': 'REV',
+                'remote_url': 'REMOTE'
+            }
+        })
+
+    def test_component_arg_name_optional(self):
+        command = self.get_deployment_command(
+            '--component path:/PATH version:VERSION'
+        )
+        packages = command.get_packages_from_args()
+        self.assertEqual(len(packages), 1)
+        package = packages[0]
+        self.assertIsInstance(package, Component)
+        self.assertEqual(package.name, 'PATH')
 
     def test_component_arg_version_or_rev_required(self):
         command = self.get_deployment_command('--component path:/PATH')
