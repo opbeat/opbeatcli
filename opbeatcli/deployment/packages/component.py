@@ -40,9 +40,10 @@ class Component(BasePackage):
             kwargs['name'] = os.path.basename(path.rstrip(os.path.sep))
 
         vcs_from_path = None
-        vcs_root = find_vcs_root(path)
-        if vcs_root:
-            vcs_from_path = VCS.from_path(vcs_root)
+        if not kwargs['vcs']:
+            vcs_root = find_vcs_root(path)
+            if vcs_root:
+                vcs_from_path = VCS.from_path(vcs_root)
 
         if vcs_from_path:
             kwargs['vcs'] = vcs_from_path
@@ -50,8 +51,8 @@ class Component(BasePackage):
                 and not (kwargs['vcs'] and kwargs['vcs'].rev)):
             raise InvalidArgumentError(
                 '--component: path:{path!r} is not a VCS repository, therefore'
-                ' version:<version> or rev:<vcs-revision> needs to be specified'
-                ' as well'
+                ' version:<version> or rev:<vcs-revision> needs to be'
+                ' specified as well'
                 .format(**kwargs)
             )
 

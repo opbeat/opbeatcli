@@ -1,4 +1,6 @@
 import os
+import subprocess
+from subprocess import CalledProcessError
 
 from pip.vcs import vcs
 from opbeatcli.exceptions import InvalidArgumentError
@@ -43,6 +45,28 @@ def is_vcs_root(path):
     return vcs.get_backend_name(path) is not None
 
 
+def get_branch(backend, path):
+    """
+    Return a branch name.
+
+    :type backend: pip.vcs.VersionControl
+
+    """
+    if backend.name == 'git':
+        output = subprocess.check_output([backend.cmd, 'branch'], cwd=path)
+        for branch in output.splitlines():
+            if branch.startswith('* '):
+                return branch[2:]
+    elif backend.name == 'hg':
+        output = subprocess.check_output([backend.cmd, 'branch'], cwd=path)
+        return output.strip()
+    elif backend.name == 'svn':
+        output = subprocess.check_output([backend.cmd, 'info'], cwd=path)
+        for line in output.splitlines():
+            if line.startswith('URL: '):
+                return line.split('/')[-1]
+
+
 class VCS(object):
 
     def __init__(self, rev, vcs_type=None, branch=None, remote_url=None):
@@ -59,7 +83,10 @@ class VCS(object):
         self.vcs_type = vcs_type
         self.rev = rev
         self.branch = branch
-        self.remote_url = expand_ssh_host_alias(remote_url)
+        self.remote_url = (
+            expand_ssh_host_alias(remote_url)
+            if remote_url else None
+        )
 
     def __repr__(self):
         return (
@@ -80,8 +107,7 @@ class VCS(object):
                 vcs_type=VCS_NAME_MAP[backend.name],
                 rev=backend.get_revision(path),
                 remote_url=backend.get_url(path),
-                # TODO: branch support.
-                branch=None,
+                branch=get_branch(backend, path),
             )
 
 

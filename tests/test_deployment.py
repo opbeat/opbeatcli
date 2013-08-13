@@ -2,6 +2,12 @@ import os
 import shlex
 from operator import attrgetter
 import datetime
+import shutil
+import subprocess
+import tempfile
+
+from pip.vcs import vcs as pip_vcs
+from pip.exceptions import BadCommand
 
 from opbeatcli.deployment.packages.deb import DebDependency
 from opbeatcli.deployment.packages.nodejs import NodeDependency
@@ -23,6 +29,20 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+
+# Homebrew-installed VCS tools may be there but not on PATH.
+os.environ['PATH'] += ':/usr/local/bin'
+
+
+def get_vcs_command(vcs_type):
+    """Find the command using a Pip VCS backend.
+
+    """
+    try:
+        return pip_vcs.get_backend(vcs_type)().cmd
+    except BadCommand:
+        pass
 
 
 class TestPackageSpecArgParsingAndValidation(unittest.TestCase):
@@ -193,7 +213,7 @@ class DeploymentPackagesCLITest(BaseDeploymentCommandTestCase):
         self.assertIsInstance(package, Component)
         self.assertEqual(package.name, 'PATH')
 
-    def test_component_arg_from_local_vcs(self):
+    def test_component_arg_from_local_git_repo(self):
         command = self.get_deployment_command('--component path:.')
         packages = command.get_packages_from_args()
         self.assertEqual(len(packages), 1)
@@ -207,6 +227,101 @@ class DeploymentPackagesCLITest(BaseDeploymentCommandTestCase):
                 'vcs_type': 'git',
             }
         })
+        self.assertIsNotNone(package.vcs.branch)
+        self.assertIsNotNone(package.vcs.rev)
+
+    @unittest.skipIf(not get_vcs_command('hg'), 'mercurial not available')
+    def test_component_arg_from_local_mercurial_repo(self):
+
+        hg = get_vcs_command('hg')
+        repo = tempfile.mkdtemp()
+        branch = 'test-branch'
+
+        try:
+            subprocess.check_call([hg, 'init'], cwd=repo)
+            subprocess.check_call([hg, 'branch', branch], cwd=repo)
+
+            command = self.get_deployment_command(
+                '--component path:%r' % str(repo))
+            packages = command.get_packages_from_args()
+            self.assertEqual(len(packages), 1)
+            package = packages[0]
+            self.assertIsInstance(package, Component)
+            self.assert_package_attributes(package, {
+                'path': repo,
+                'name': os.path.basename(repo),
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'mercurial',
+                    'branch': branch,
+                }
+            })
+            self.assertIsNotNone(package.vcs.branch)
+
+        finally:
+            shutil.rmtree(repo)
+
+    @unittest.skipIf(not get_vcs_command('svn'), 'subversion not available')
+    def test_component_arg_from_local_subversion_repo(self):
+
+        svn = get_vcs_command('svn')
+        repo = tempfile.mkdtemp()
+        try:
+            subprocess.check_call([
+                svn, 'checkout',
+                '--non-interactive',
+                '--trust-server-cert',
+                'https://github.com/opbeat/opbeatcli/trunk',
+                repo
+            ])
+            command = self.get_deployment_command(
+                '--component path:%r' % str(repo))
+            packages = command.get_packages_from_args()
+            self.assertEqual(len(packages), 1)
+            package = packages[0]
+            self.assertIsInstance(package, Component)
+            self.assert_package_attributes(package, {
+                'path': repo,
+                'name': os.path.basename(repo),
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'subversion',
+                    'branch': 'trunk',
+                }
+            })
+            self.assertIsNotNone(package.vcs.rev)
+
+        finally:
+            shutil.rmtree(repo)
+
+    @unittest.skipIf(not get_vcs_command('bzr'), 'bazaar not available')
+    def test_component_arg_from_local_bazaar_repo(self):
+
+        bzr = get_vcs_command('bzr')
+        repo = tempfile.mkdtemp()
+        try:
+            subprocess.check_call([
+                bzr, 'init', repo
+            ])
+            command = self.get_deployment_command(
+                '--component path:%r' % str(repo))
+            packages = command.get_packages_from_args()
+            self.assertEqual(len(packages), 1)
+            package = packages[0]
+            self.assertIsInstance(package, Component)
+            self.assert_package_attributes(package, {
+                'path': repo,
+                'name': os.path.basename(repo),
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'bazaar',
+                    'branch': None,
+                    'rev': '0'
+                }
+            })
+
+        finally:
+            shutil.rmtree(repo)
 
     def test_component_arg_version_or_rev_required(self):
         command = self.get_deployment_command('--component path:/PATH')

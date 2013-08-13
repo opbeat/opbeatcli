@@ -6,6 +6,11 @@ python:
   - '3.3'
   - pypy
 
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install -qq subversion mercurial bazaar
+
+
 install:
   - pip install -e . --use-mirrors
 
