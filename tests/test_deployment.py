@@ -161,9 +161,9 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
             'version': None,
             'vcs': {
                 'vcs_type': 'git',
-                'remote_url': 'git@github.com:opbeat/opbeatcli.git'
             }
         })
+        self.assertIn('opbeat/opbeatcli.git', package.vcs.remote_url)
         self.assertIsNotNone(package.vcs.branch)
         self.assertIsNotNone(package.vcs.rev)
 
@@ -224,9 +224,9 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
                 'vcs': {
                     'vcs_type': 'subversion',
                     'branch': 'trunk',
+                    'remote_url': 'https://github.com/opbeat/opbeatcli/trunk'
                 }
             })
-            self.assertIn('opbeat/opbeatcli.git', package.vcs.remote_url)
             self.assertIsNotNone(package.vcs.rev)
 
         finally:
