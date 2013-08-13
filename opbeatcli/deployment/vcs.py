@@ -1,10 +1,9 @@
 import os
 import subprocess
-from subprocess import CalledProcessError
 
 from pip.vcs import vcs
-from opbeatcli.exceptions import InvalidArgumentError
 
+from opbeatcli.exceptions import InvalidArgumentError
 from opbeatcli.utils.ssh_config import SSHConfig
 
 try:
