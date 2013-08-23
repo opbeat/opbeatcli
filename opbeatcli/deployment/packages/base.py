@@ -87,7 +87,7 @@ class BaseDependency(BasePackage):
             package_class = DEPENDENCIES_BY_TYPE[package_type]
         except KeyError:
             raise InvalidArgumentError(
-                'Invalid --dependency "type:{selected}".'
+                'Invalid --dependency type:{selected!r}.'
                 ' Type has to be one of {all}'
                 .format(
                     selected=str(package_type),

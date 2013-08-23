@@ -39,22 +39,41 @@ class Component(BasePackage):
         if not kwargs['name']:
             kwargs['name'] = os.path.basename(path.rstrip(os.path.sep))
 
+        # Try to fetch VCS info from path if no VCS attributes specified.
         vcs_from_path = None
-        if not kwargs['vcs']:
-            vcs_root = find_vcs_root(path)
-            if vcs_root:
-                vcs_from_path = VCS.from_path(vcs_root)
+        vcs_root = find_vcs_root(path)
+        if not kwargs['vcs'] and vcs_root:
+            vcs_from_path = VCS.from_path(vcs_root)
 
         if vcs_from_path:
             kwargs['vcs'] = vcs_from_path
-        elif (not vcs_from_path and not kwargs['version']
-                and not (kwargs['vcs'] and kwargs['vcs'].rev)):
-            raise InvalidArgumentError(
-                '--component: path:{path!r} is not a VCS repository, therefore'
-                ' version:<version> or rev:<vcs-revision> needs to be'
-                ' specified as well'
-                .format(**kwargs)
-            )
+        elif not (kwargs['version'] or (kwargs['vcs'] and kwargs['vcs'].rev)):
+            # Missing version/revision info.
+
+            if not kwargs['vcs']:
+                # No VCS attributes specified and path is not a VCS repo.
+                message = (
+                    'The directory is not a VCS repository, therefore at least'
+                    ' "version:<version>" or  "rev:<vcs-revision>" is'
+                    ' required.'
+                )
+            elif vcs_root:
+                # Some VCS attributes specified but version/rev is missing,
+                # even though the path is a VCS repo.
+                message = (
+                    '"version:<version>" or "rev:<vcs-revision>" is required.'
+                    '\nNote: the directory {path!r} is a VCS repository,'
+                    ' therefore it is unnecessary to specify any VCS'
+                    ' attributes manually. They are filled in'
+                    ' automatically if none specified.'
+                )
+            else:
+                # Some VCS attributes specified and path isn't a VCS repo.
+                message = (
+                    '"version:<version>" or "rev:<vcs-revision>" is required.'
+                )
+
+            message = '--component: path:{path!r}: ' + message
+            raise InvalidArgumentError(message.format(**kwargs))
 
         return kwargs
-

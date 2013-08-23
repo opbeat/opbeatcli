@@ -338,15 +338,24 @@ Introduction:
                     name:<name>                (optional)
                     version:<version-string>   (optional if VCS info specified)
 
-                VCS attributes: if the provided path is a VCS checkout,
-                these attributes will be filled automatically:
+                    Path is used to find out local VCS information for a
+                    component, and also to match error logs with components on
+                    opbeat.com, therefore it is required even if it is not a
+                    VCS repository.
+
+                VCS attributes:
+
+                    None of these attributes should be specified if the
+                    provided path is a VCS repository, because then they are
+                    filled in automatically:
 
                     vcs:<{vcs_types}>
                     rev:<vcs-revision>
                     branch:<vcs-branch>
                     remote_url:<vcs-remote-url>
 
-                A component has to have a path, and at least a version or rev.
+                A component has to have "path", and at least a "version" or
+                "rev".
 
                 Examples:
 
@@ -387,7 +396,8 @@ Introduction:
 
                     type:<{dependency_types}>
 
-                A dependency has to have a name, and at least a version or rev.
+                A dependency has to have "type", "name", and at least "version"
+                or "rev".
 
                 Examples:
 
