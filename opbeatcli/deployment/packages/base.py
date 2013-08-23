@@ -83,7 +83,17 @@ class BaseDependency(BasePackage):
             raise InvalidArgumentError(
                 '--dependency has to have at least either "version" or "rev"'
             )
-        package_class = DEPENDENCIES_BY_TYPE[package_type]
+        try:
+            package_class = DEPENDENCIES_BY_TYPE[package_type]
+        except KeyError:
+            raise InvalidArgumentError(
+                'Invalid --dependency "type:{selected}".'
+                ' Type has to be one of {all}'
+                .format(
+                    selected=str(package_type),
+                    all=', '.join(sorted(DEPENDENCIES_BY_TYPE.keys())),
+                )
+            )
         return package_class(**kwargs)
 
 
