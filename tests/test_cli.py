@@ -10,7 +10,7 @@ except ImportError:
     import unittest
 
 
-class CommonCommonCLIOptionsTest(unittest.TestCase):
+class CommonCLIOptionsTest(unittest.TestCase):
 
     def test_opbeat_cli_no_arguments(self):
         main(args=[])

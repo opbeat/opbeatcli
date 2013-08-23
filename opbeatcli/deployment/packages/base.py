@@ -1,9 +1,11 @@
 from __future__ import absolute_import
 from subprocess import Popen, PIPE
 
-from opbeatcli.exceptions import InvalidArgumentError, DependencyParseError
 from opbeatcli.log import logger
-from opbeatcli.exceptions import ExternalCommandError, ExternalCommandNotFoundError
+from opbeatcli.exceptions import (
+    InvalidArgumentError, DependencyParseError,
+    ExternalCommandError, ExternalCommandNotFoundError
+)
 from ..vcs import VCS
 from .types import PACKAGE_TYPES
 
