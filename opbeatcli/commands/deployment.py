@@ -14,7 +14,8 @@ from opbeatcli.deployment.vcs import VCS_NAME_MAP
 from opbeatcli.deployment.packages import (DEPENDENCY_COLLECTORS,
                                            DEPENDENCIES_BY_TYPE)
 from opbeatcli.exceptions import (InvalidArgumentError,
-                                  ExternalCommandNotFoundError)
+                                  ExternalCommandNotFoundError,
+                                  ExternalCommandError)
 from .base import CommandBase
 
 
@@ -218,7 +219,11 @@ class DeploymentCommand(CommandBase):
                     for dep in collector.collect():
                         yield dep
                 except ExternalCommandNotFoundError:
+                    # Completely ignore missing auto collection commands.
                     pass
+                except ExternalCommandError as e:
+                    # Warn about auto collection command failures.
+                    self.logger.warn(str(e))
 
     def get_packages_from_args(self):
         """
