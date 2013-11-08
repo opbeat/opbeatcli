@@ -36,7 +36,7 @@ def main(args=sys.argv[1:]):
     except ClientConnectionError as e:
         # The error has already been logged by the client.
         response_status = e.args[0]
-        if response_status < 400:
+        if response_status < 500:
             return EXIT_CLIENT_ERROR
         else:
             return EXIT_SERVER_ERROR
