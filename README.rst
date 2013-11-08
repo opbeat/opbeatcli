@@ -2,10 +2,14 @@
 Opbeat CLI
 ##########
 
-Command line tools for `Opbeat <https://opbeat.com/>`_.
+Command line client for `Opbeat <https://opbeat.com/>`_.
 
 
-.. image:: https://secure.travis-ci.org/opbeat/opbeatcli.png?branch=master
+.. image:: https://badge.fury.io/py/opbeatcli.png
+   :target: https://pypi.python.org/pypi/opbeatcli
+
+
+.. image:: https://secure.travis-ci.org/opbeat/opbeatcli.png?branch=dev
    :target: http://travis-ci.org/opbeat/opbeatcli
 
 
