@@ -116,9 +116,7 @@ class BaseDependencyCollector(object):
         stdout, stderr = process.communicate()
         exit_status = process.poll()
 
-        stderr = stderr.strip().decode()
-        stdout = stdout.strip().decode()
-
+        stderr, stdout = stderr.strip().decode(), stdout.strip().decode()
         self.logger.debug('  exit status: %s', exit_status)
 
         if stderr:
@@ -142,10 +140,15 @@ class BaseDependencyCollector(object):
             )
             if exit_status == COMMAND_NOT_FOUND:
                 raise ExternalCommandNotFoundError(msg)
-            raise ExternalCommandError(msg)
 
-        # FIXME: might be another encoding.
+            if self.is_fatal_error(exit_status, stdout, stderr):
+                raise ExternalCommandError(msg)
+
         return stdout
+
+    def is_fatal_error(self, exit_status, stdout, stderr):
+        """Called when a command exits with non-zero status."""
+        return True
 
     def parse(self, output):
         """Parse command ``output`` and yield dependencies.
