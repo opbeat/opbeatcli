@@ -141,14 +141,14 @@ class BaseDependencyCollector(object):
             if exit_status == COMMAND_NOT_FOUND:
                 raise ExternalCommandNotFoundError(msg)
 
-            if self.is_fatal_error(exit_status, stdout, stderr):
+            if not self.should_ignore_error(exit_status, stdout, stderr):
                 raise ExternalCommandError(msg)
 
         return stdout
 
-    def is_fatal_error(self, exit_status, stdout, stderr):
+    def should_ignore_error(self, exit_status, stdout, stderr):
         """Called when a command exits with non-zero status."""
-        return True
+        return False
 
     def parse(self, output):
         """Parse command ``output`` and yield dependencies.

@@ -11,7 +11,7 @@ class NodeCollector(BaseDependencyCollector):
         'npm --json --local list',
     ]
 
-    def is_fatal_error(self, exit_status, stdout, stderr):
+    def should_ignore_error(self, exit_status, stdout, stderr):
         """
         Use `npm list` output as long as it is parseable JSON regardless
         of the error exit status code.
@@ -33,8 +33,8 @@ class NodeCollector(BaseDependencyCollector):
             else:
                 if isinstance(data, dict):
                     self.logger.warning(stderr)
-                    return False
-        return True
+                    return True
+        return False
 
     def parse(self, output):
         try:
