@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """
-opbeatcli is a command line client for `Opbeat <https://opbeat.com/>`_.
-It provides access to the Opbeat API through the command line. It is also
-useful for use in your own applications. "opbeat" is installed as a binary.
+Opbeat CLI is a command line client for Opbeat.
 
 """
 from setuptools import setup, find_packages
