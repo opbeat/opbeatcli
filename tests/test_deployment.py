@@ -167,6 +167,42 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
         self.assertIsNotNone(package.vcs.branch)
         self.assertIsNotNone(package.vcs.rev)
 
+    def test_component_arg_from_local_git_repo_with_no_remote(self):
+        git = get_vcs_command('git')
+        repo = tempfile.mkdtemp()
+
+        try:
+            subprocess.check_call([git, 'init'], cwd=repo)
+            with open(os.path.join(repo, "readme.md"), "w") as readme_file:
+                readme_file.write("Temp. readme file")
+
+            subprocess.check_call([git, 'add', '.'], cwd=repo)
+            subprocess.check_call([git, 'commit', '-m', 'Initial commit'], cwd=repo)
+
+            command = self.get_deployment_command(
+                '--component path:{}'.format(repo))
+            packages = command.get_packages_from_args()
+            self.assertEqual(len(packages), 1)
+            package = packages[0]
+            self.assertIsInstance(package, Component)
+            self.assert_package_attributes(package, {
+                'path': repo,
+                'name': repo.split("/")[-1],
+                'version': None,
+                'vcs': {
+                    'vcs_type': 'git',
+                }
+            })
+            self.assertEqual(None, package.vcs.remote_url)
+            self.assertIsNotNone(package.vcs.branch)
+            self.assertIsNotNone(package.vcs.rev)
+        except:
+            raise
+        finally:
+            shutil.rmtree(repo)
+
+
+
     @unittest.skipIf(not get_vcs_command('hg'), 'mercurial not available')
     def test_component_arg_from_local_mercurial_repo(self):
 

@@ -1,4 +1,5 @@
 import os
+from pip import InstallationError
 
 from pip.vcs import vcs
 
@@ -97,10 +98,16 @@ class VCS(object):
         backend_class = vcs.get_backend_from_location(path)
         if backend_class:
             backend = backend_class()
+
+            try:
+                remote_url = backend.get_url(path)
+            except InstallationError:
+                remote_url = None
+
             return VCS(
                 vcs_type=VCS_NAME_MAP[backend.name],
                 rev=backend.get_revision(path),
-                remote_url=backend.get_url(path),
+                remote_url=remote_url,
                 branch=get_branch(backend, path),
             )
 
