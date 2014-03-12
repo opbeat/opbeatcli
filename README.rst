@@ -95,7 +95,7 @@ that is being deployed to:
         deployment --component path:.
 
 For more information and examples please see
-`deployment tracking documentation <https://opbeat.com/docs/deployment_standard/>`_
+`deployment tracking documentation <https://opbeat.com/docs/release_standard/>`_
 and the command help:
 
 .. code-block:: bash
