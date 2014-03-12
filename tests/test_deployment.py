@@ -177,7 +177,8 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
                 readme_file.write("Temp. readme file")
 
             subprocess.check_call([git, 'add', '.'], cwd=repo)
-            subprocess.check_call([git, 'commit', '-m', 'Initial commit'], cwd=repo)
+            subprocess.check_call(
+                [git, 'commit', '-m', 'Initial commit'], cwd=repo)
 
             command = self.get_deployment_command(
                 '--component path:{}'.format(repo))
@@ -200,8 +201,6 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
             raise
         finally:
             shutil.rmtree(repo)
-
-
 
     @unittest.skipIf(not get_vcs_command('hg'), 'mercurial not available')
     def test_component_arg_from_local_mercurial_repo(self):
@@ -493,8 +492,7 @@ class TestDependencyCollection(_BaseDeploymentCommandTestCase):
         """
         with self.assertRaises(ExternalCommandNotFoundError):
             list(self.get_deployment_command(
-                '--collect-dependencies python:/NOT/A/CMD')
-            .get_all_packages())
+                '--collect-dependencies python:/NOT/A/CMD').get_all_packages())
 
     def test_collect_dependencies_default_and_custom_commands(self):
         list(
