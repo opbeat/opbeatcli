@@ -197,8 +197,6 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
             self.assertEqual(None, package.vcs.remote_url)
             self.assertIsNotNone(package.vcs.branch)
             self.assertIsNotNone(package.vcs.rev)
-        except:
-            raise
         finally:
             shutil.rmtree(repo)
 
