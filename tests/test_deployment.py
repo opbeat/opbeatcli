@@ -181,7 +181,7 @@ class DeploymentVCSComponentsTest(_BaseDeploymentCommandTestCase):
                 [git, 'commit', '-m', 'Initial commit'], cwd=repo)
 
             command = self.get_deployment_command(
-                '--component path:{}'.format(repo))
+                '--component path:{0}'.format(repo))
             packages = command.get_packages_from_args()
             self.assertEqual(len(packages), 1)
             package = packages[0]
