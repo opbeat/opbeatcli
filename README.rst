@@ -1,8 +1,11 @@
 ##########
-Opbeat CLI
+DEPRECATED: Opbeat CLI
 ##########
 
-Command line client for `Opbeat <https://opbeat.com/>`_.
+Please see https://opbeat.com/docs/articles/get-started-with-release-tracking/ for a much simpler way.
+
+
+
 
 
 .. image:: https://badge.fury.io/py/opbeatcli.png
